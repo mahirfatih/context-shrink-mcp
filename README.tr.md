@@ -39,6 +39,14 @@ Tam anlatımı okuyun (neden 32K, üç sıkıştırma modu, ortam değişkenleri
 
 ---
 
+## ✅ Öneri
+
+Sabit bir bağlam penceresine sahip oMLX veya başka bir yerel OpenAI-uyumlu sunucu kullanıyorsanız ve en az bir kez `Prompt is too long` hatası aldıysanız kullanın. Tek bir Python dosyasıdır ve GPU gerektirmez. `estimate_context` ve `trim_context` saf aritmetiktir — çıkarım zamanında hiçbir maliyeti yoktur. `compact_context` yalnızca özetlemesini istediğinizde yerel modeli çağırır (ya da hazır bir özet verirsiniz ve hiçbir şey çağırmaz).
+
+Bağlam pencereniz oturumlarınız için yeterince büyükse ya da istemciniz geçmişi kendi başına sıkıştırıyorsa muhtemelen buna ihtiyacınız yok.
+
+---
+
 ## 🛠️ Teknoloji Yığını ve Mimari
 
 - **Dil ve Çalışma Zamanı:** Python 3.10+, yalnızca standart kütüphane
@@ -74,25 +82,26 @@ _(Arayüz yok — bu başsız (headless) bir MCP sunucusudur. Araç çıktısı 
 ## 🏗️ Mimari
 
 ```mermaid
-graph TD
-    subgraph Server["oMLX Prompt Shrink — MCP sunucusu (stdio)"]
-        Entry["omlx-prompt-shrink.py<br/>MCPServer('oMLX Prompt Shrink')"]
-        Est["estimate_context<br/>chars ÷ 4"]
-        Trim["trim_context<br/>en eskileri at"]
-        Compact["compact_context<br/>en eskileri özetle"]
-        Split["_split_for_compaction<br/>baş / özetlenecek / korunacak"]
-        Sum["_summarize<br/>parçalı, yerel model"]
-        Chat["_call_chat_completions<br/>OpenAI-uyumlu"]
-    end
+flowchart LR
+    classDef client fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    classDef entry fill:#fff3e0,stroke:#ef6c00,color:#e65100
+    classDef tool fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    classDef step fill:#f3e5f5,stroke:#6a1b9a,color:#4a148c
+    classDef external fill:#fce4ec,stroke:#c2185b,color:#880e4f
 
-    Client["OpenCode (Code Mode)"] -->|"araç çağrısı"| Entry
-    Entry --> Est
-    Entry --> Trim
-    Entry --> Compact
-    Compact --> Split
-    Compact --> Sum
-    Sum --> Chat
-    Chat -->|"POST /chat/completions"| Endpoint["Yerel model (oMLX)"]
+    Client["💻 OpenCode<br/>(MCP istemcisi)"]:::client
+    Entry["🚪 Giriş noktası<br/>omlx-prompt-shrink.py"]:::entry
+
+    Client -->|"araç çağrısı"| Entry
+
+    Entry --> Est["📊 estimate_context<br/>karakter ÷ 4"]:::tool
+    Entry --> Trim["✂️ trim_context<br/>en eski mesajları at"]:::tool
+    Entry --> Compact["🗜️ compact_context<br/>en eski mesajları özetle"]:::tool
+
+    Compact --> Split["✂️ split_for_compaction<br/>baş / özetlenecek / korunacak"]:::step
+    Compact --> Sum["📝 _summarize<br/>parçalı, yerel model"]:::step
+    Sum --> Chat["🌐 _call_chat_completions<br/>OpenAI-uyumlu"]:::step
+    Chat -->|"POST /chat/completions"| Endpoint["🤖 Yerel model (oMLX)"]:::external
 ```
 
 ---
@@ -202,17 +211,60 @@ Yapılandırma değişiklikleri yeniden başlatma gerektirmez — OpenCode yapı
   atmak yerine özü korumak için `compact_context` kullanın.
 - Bir ajan, tahmin sınırı aştığında bunu her istekten önce otomatik yapabilir.
 
+Örnek çağrı:
+
+```json
+{
+  "messages": [
+    { "role": "user", "content": "ilk mesaj" },
+    { "role": "assistant", "content": "ilk yanıt" },
+    { "role": "user", "content": "ikinci mesaj" }
+  ],
+  "keep_last": 8,
+  "max_context_tokens": 32768
+}
+```
+
+Sıkıştırma akışı, model modu:
+
+```json
+{
+  "messages": [ "..." ],
+  "keep_last": 8,
+  "model": "Qwen3.6-35B-A3B-4bit",
+  "base_url": "http://127.0.0.1:8000/v1"
+}
+```
+
+Sıkıştırma akışı, ajan modu (iki çağrı):
+
+1. `compact_context({ "messages": [...], "force": true })` → `needs_summary: true`
+   ve `summary_prompt`.
+2. Ajan özeti yazar, ardından tekrar çağırır:
+   `{ "messages": [...], "force": true, "summary": "<o metin>" }` → sıkıştırılmış
+   `messages` listesi.
+
 ---
 
 ## 📂 Proje Yapısı
 
 ```
 omlx-prompt-shrink/
-├── omlx-prompt-shrink.py # Tek dosyalık MCP sunucusu (ürünün tamamı)
-├── README.md            # İngilizce dokümantasyon
-├── README.tr.md         # Bu dosya (Türkçe)
-├── requirements.txt     # Çalışma zamanı bağımlılıkları (mcp)
-├── LICENSE              # MIT
+├── omlx-prompt-shrink.py    # Tek dosyalık MCP sunucusu (ürünün tamamı)
+├── README.md                # İngilizce dokümantasyon
+├── README.tr.md             # Bu dosya (Türkçe)
+├── CONTRIBUTING.md          # Kurulum, testler, commit kuralları
+├── CHANGELOG.md             # Keep a Changelog sürüm notları
+├── requirements-dev.txt     # Geliştirme bağımlılıkları (mcp, pytest, ruff, tiktoken)
+├── pytest.ini               # pytest yapılandırması (testpaths, python_files)
+├── .ruff.toml               # Ruff lint yapılandırması
+├── .github/workflows/ci.yml # CI: lint + derleme + testler
+├── test/                    # Test runner + pytest birim testleri
+│   ├── test.sh              # Tek test runner (ruff + pytest)
+│   ├── README.md            # Test klasörü kılavuzu
+│   ├── conftest.py          # Sunucu modülünü yola göre yükler; ortak fixture'lar
+│   └── omlx-prompt-shrink-tests.py # Saf yardımcılar + tokenizer çözümleme
+├── LICENSE                  # MIT
 └── .gitignore
 ```
 
@@ -220,7 +272,18 @@ omlx-prompt-shrink/
 
 ## 🧪 Test ve CI
 
-Henüz otomatik test paketi yok — `estimate_context` ve `trim_context` saf aritmetiktir ve MCP istemcisi üzerinden elle çalıştırılır. `pytest` paketi ekleyen katkılar memnuniyetle karşılanır.
+```bash
+./test/test.sh              # dev bağımlılıkları kur, sonra ruff + pytest
+./test/test.sh --lint       # yalnızca ruff
+./test/test.sh --no-install # pip install adımını atla
+./test/test.sh --only test/omlx-prompt-shrink-tests.py::test_compact_uses_provided_summary
+```
+
+- **Runner:** [`test/test.sh`](./test/test.sh) geliştirme bağımlılıklarını kurar, Ruff ve ardından pytest çalıştırır. Yorumlayıcı, varsa proje `.venv`'i, yoksa `python3`'tür.
+- **Paketler:** [`test/`](./test) saf yardımcıları (token tahmini, kırpma, sıkıştırma bölme ve parçalama) ve opsiyonel tokenizer çözümleme mantığını kapsar — ağ yok, MCP taşıması yok.
+- **CI:** [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) Ruff, bir `py_compile` kontrolü ve `pytest` çalıştırır. **Yalnızca manuel** tetiklenir — Actions sekmesi → CI → Run workflow.
+
+Sunucuyu elle, bir istemci üzerinden çalıştırmak için:
 
 ```bash
 python3 omlx-prompt-shrink.py   # stdio sunucusunu başlatır; durdurmak için Ctrl-C
@@ -231,7 +294,25 @@ python3 omlx-prompt-shrink.py   # stdio sunucusunu başlatır; durdurmak için C
 ## 📚 Dokümantasyon
 
 - [README.md](./README.md) — İngilizce sürüm.
+- [README.tr.md](./README.tr.md) — bu dosya.
 - [omlx-prompt-shrink.py](./omlx-prompt-shrink.py) — araç şemaları ve davranışın kaynağı.
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — geliştirme kurulumu, testler ve commit kuralları.
+- [CHANGELOG.md](./CHANGELOG.md) — sürüm notları.
+
+---
+
+## 📝 Notlar
+
+- Varsayılan bağlam sınırı: `32768` token — profilinize göre değiştirin.
+- Kırpma politikası: önce en eski mesajlar; son `keep_last` mesaj her zaman korunur.
+- Sıkıştırma politikası: baştaki `system` mesajları korunur, geri kalanların en eskileri özeti taşıyan tek bir `system` mesajıyla değiştirilir ve son `keep_last` mesaj aynen korunur.
+- Araç yüzeyi sade MCP'dir; yani yalnızca OpenCode değil, herhangi bir MCP istemcisi sunucuyu kullanabilir.
+
+---
+
+## 🔗 Arka Plan
+
+Bu sunucunun ele aldığı 32K profili ve `Prompt is too long` hatası [`mahirfatih/omlx-m1-max-benchmark`](https://github.com/mahirfatih/omlx-m1-max-benchmark) deposunda belgelenmiştir: `docs/reference/PROFILES.md` bağlam penceresinin neden 32K olduğunu açıklar, README ise bu sunucu için öneri bölümünü içerir.
 
 ---
 

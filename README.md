@@ -39,6 +39,14 @@ Read the full walkthrough (why 32K, the three compaction modes, the environment 
 
 ---
 
+## ✅ Recommendation
+
+Use it if you run oMLX or another local OpenAI-compatible server with a fixed context window and you have hit `Prompt is too long` at least once. It is a single Python file and needs no GPU. `estimate_context` and `trim_context` are pure arithmetic — they cost nothing at inference time. `compact_context` only calls the local model when you ask it to summarise (or you can hand it a summary yourself and it calls nothing at all).
+
+You probably do not need it if your context window is large enough for your sessions, or if your client already compacts history on its own.
+
+---
+
 ## 🛠️ Tech Stack & Architecture
 
 - **Language & Runtime:** Python 3.10+, standard library only
@@ -74,25 +82,26 @@ _(No UI — this is a headless MCP server. Tool output is JSON on stdio.)_
 ## 🏗️ Architecture
 
 ```mermaid
-graph TD
-    subgraph Server["oMLX Prompt Shrink — MCP server (stdio)"]
-        Entry["omlx-prompt-shrink.py<br/>MCPServer('oMLX Prompt Shrink')"]
-        Est["estimate_context<br/>chars ÷ 4"]
-        Trim["trim_context<br/>drop oldest"]
-        Compact["compact_context<br/>summarise oldest"]
-        Split["_split_for_compaction<br/>leading / to summarise / keep"]
-        Sum["_summarize<br/>chunked, local model"]
-        Chat["_call_chat_completions<br/>OpenAI-compatible"]
-    end
+flowchart LR
+    classDef client fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    classDef entry fill:#fff3e0,stroke:#ef6c00,color:#e65100
+    classDef tool fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    classDef step fill:#f3e5f5,stroke:#6a1b9a,color:#4a148c
+    classDef external fill:#fce4ec,stroke:#c2185b,color:#880e4f
 
-    Client["OpenCode (Code Mode)"] -->|"tool call"| Entry
-    Entry --> Est
-    Entry --> Trim
-    Entry --> Compact
-    Compact --> Split
-    Compact --> Sum
-    Sum --> Chat
-    Chat -->|"POST /chat/completions"| Endpoint["Local model (oMLX)"]
+    Client["💻 OpenCode<br/>(MCP client)"]:::client
+    Entry["🚪 Entry point<br/>omlx-prompt-shrink.py"]:::entry
+
+    Client -->|"tool call"| Entry
+
+    Entry --> Est["📊 estimate_context<br/>chars ÷ 4"]:::tool
+    Entry --> Trim["✂️ trim_context<br/>drop oldest messages"]:::tool
+    Entry --> Compact["🗜️ compact_context<br/>summarise oldest messages"]:::tool
+
+    Compact --> Split["✂️ split_for_compaction<br/>leading / to-summarise / keep"]:::step
+    Compact --> Sum["📝 _summarize<br/>chunked, local model"]:::step
+    Sum --> Chat["🌐 _call_chat_completions<br/>OpenAI-compatible"]:::step
+    Chat -->|"POST /chat/completions"| Endpoint["🤖 Local model (oMLX)"]:::external
 ```
 
 
@@ -205,16 +214,60 @@ arguments are not given:
 - An agent can do this automatically before every request when the estimate
   crosses the limit.
 
+Example call:
+
+```json
+{
+  "messages": [
+    { "role": "user", "content": "first message" },
+    { "role": "assistant", "content": "first answer" },
+    { "role": "user", "content": "second message" }
+  ],
+  "keep_last": 8,
+  "max_context_tokens": 32768
+}
+```
+
+Compaction flow, model mode:
+
+```json
+{
+  "messages": [ "..." ],
+  "keep_last": 8,
+  "model": "Qwen3.6-35B-A3B-4bit",
+  "base_url": "http://127.0.0.1:8000/v1"
+}
+```
+
+Compaction flow, agent mode (two calls):
+
+1. `compact_context({ "messages": [...], "force": true })` → `needs_summary: true`
+   plus the `summary_prompt`.
+2. The agent writes the summary, then calls again with
+   `{ "messages": [...], "force": true, "summary": "<that text>" }` → the
+   compacted `messages` list.
+
 ---
 
 ## 📂 Project Structure
 
 ```
 omlx-prompt-shrink/
-├── omlx-prompt-shrink.py # Single-file MCP server (the whole product)
-├── README.md            # This file
-├── README.tr.md         # Turkish documentation
-├── LICENSE              # MIT
+├── omlx-prompt-shrink.py    # Single-file MCP server (the whole product)
+├── README.md                # English documentation
+├── README.tr.md             # Turkish documentation
+├── CONTRIBUTING.md          # Setup, tests, commit conventions
+├── CHANGELOG.md             # Keep a Changelog release notes
+├── requirements-dev.txt     # Dev dependencies (mcp, pytest, ruff, tiktoken)
+├── pytest.ini               # pytest config (testpaths, python_files)
+├── .ruff.toml               # Ruff lint configuration
+├── .github/workflows/ci.yml # CI: lint + compile + tests
+├── test/                    # Test runner + pytest unit tests
+│   ├── test.sh              # Single test runner (ruff + pytest)
+│   ├── README.md            # Test folder guide
+│   ├── conftest.py          # Loads the server module by path; shared fixtures
+│   └── omlx-prompt-shrink-tests.py # Pure helpers + tokenizer resolution
+├── LICENSE                  # MIT
 └── .gitignore
 ```
 
@@ -222,7 +275,18 @@ omlx-prompt-shrink/
 
 ## 🧪 Testing & CI
 
-There is no automated test suite yet — `estimate_context` and `trim_context` are pure arithmetic and are exercised manually through the MCP client. Contributions that add a `pytest` suite are welcome.
+```bash
+./test/test.sh              # install dev deps, then ruff + pytest
+./test/test.sh --lint       # ruff only
+./test/test.sh --no-install # skip the pip install step
+./test/test.sh --only test/omlx-prompt-shrink-tests.py::test_compact_uses_provided_summary
+```
+
+- **Runner:** [`test/test.sh`](./test/test.sh) installs the dev dependencies, runs Ruff, then pytest. The interpreter is the project `.venv` when present, otherwise `python3`.
+- **Suites:** [`test/`](./test) covers the pure helpers (token estimation, trimming, compaction splitting and chunking) plus the optional-tokenizer resolution logic — no network, no MCP transport.
+- **CI:** [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs Ruff, a `py_compile` check, and `pytest`. It is **manual only** — trigger it with `workflow_dispatch` (Actions tab → CI → Run workflow).
+
+Run the server by hand to exercise it through a client:
 
 ```bash
 python3 omlx-prompt-shrink.py   # starts the stdio server; Ctrl-C to stop
@@ -235,6 +299,23 @@ python3 omlx-prompt-shrink.py   # starts the stdio server; Ctrl-C to stop
 - [README.md](./README.md) — this file.
 - [README.tr.md](./README.tr.md) — Turkish translation.
 - [omlx-prompt-shrink.py](./omlx-prompt-shrink.py) — source of truth for tool schemas and behaviour.
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — development setup, tests, and commit conventions.
+- [CHANGELOG.md](./CHANGELOG.md) — release notes.
+
+---
+
+## 📝 Notes
+
+- Default context limit: `32768` tokens — change it to match your profile.
+- Trim policy: oldest messages first; the last `keep_last` messages are always kept.
+- Compact policy: leading `system` messages are kept, the oldest of the rest are replaced by one `system` message holding the summary, and the last `keep_last` messages are kept verbatim.
+- The tool surface is plain MCP, so any MCP client can use the server, not just OpenCode.
+
+---
+
+## 🔗 Background
+
+The 32K profile and the `Prompt is too long` failure this server addresses are documented in [`mahirfatih/omlx-m1-max-benchmark`](https://github.com/mahirfatih/omlx-m1-max-benchmark): `docs/reference/PROFILES.md` explains why the context window is set to 32K, and the README has the recommendation section for this server.
 
 ---
 
