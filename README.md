@@ -172,9 +172,8 @@ Set the environment variables under `environment` in the MCP entry so `compact_c
 ```
 omlx-prompt-shrink/
 ├── omlx-prompt-shrink.py # Single-file MCP server (the whole product)
-├── README.md            # This file
-├── requirements.txt     # Runtime dependencies (mcp)
-├── LICENSE              # MIT
+├── README.md             # This file
+├── LICENSE               # MIT
 └── .gitignore
 ```
 
