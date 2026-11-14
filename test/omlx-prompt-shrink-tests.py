@@ -12,13 +12,13 @@ from types import ModuleType
 
 import pytest
 
-# --- _content_text ---------------------------------------------------------
+# --- _content_to_text ---------------------------------------------------------
 
 
-def test_content_text_handles_string_none_and_parts(shrink: ModuleType) -> None:
-    assert shrink._content_text(None) == ""
-    assert shrink._content_text("hello") == "hello"
-    assert shrink._content_text([{"text": "a"}, "b", {"no": "text"}]) == "a\nb"
+def test_content_to_text_handles_string_none_and_parts(shrink: ModuleType) -> None:
+    assert shrink._content_to_text(None) == ""
+    assert shrink._content_to_text("hello") == "hello"
+    assert shrink._content_to_text([{"text": "a"}, "b", {"no": "text"}]) == "a\nb"
 
 
 # --- token estimation ------------------------------------------------------
@@ -176,7 +176,7 @@ def test_tokenizer_falls_back_when_tiktoken_missing(
 ) -> None:
     monkeypatch.setenv("OMLX_SHRINK_TOKENIZER", "auto")
     monkeypatch.setattr(shrink, "tiktoken", None)
-    monkeypatch.setattr(shrink, "_TOKENIZER", None)
+    monkeypatch.setattr(shrink, "_tokenizer_cache", None)
     encode, label = shrink._resolve_tokenizer()
     assert encode is None
     assert label == shrink._HEURISTIC_LABEL
@@ -188,7 +188,7 @@ def test_tokenizer_uses_tiktoken_when_available(
     fake = _FakeTiktoken()
     monkeypatch.setenv("OMLX_SHRINK_TOKENIZER", "auto")
     monkeypatch.setattr(shrink, "tiktoken", fake)
-    monkeypatch.setattr(shrink, "_TOKENIZER", None)
+    monkeypatch.setattr(shrink, "_tokenizer_cache", None)
     encode, label = shrink._resolve_tokenizer()
     assert label == "tiktoken:cl100k_base"
     assert fake.calls == ["cl100k_base"]
@@ -201,7 +201,7 @@ def test_tokenizer_honours_explicit_encoding(
     fake = _FakeTiktoken()
     monkeypatch.setenv("OMLX_SHRINK_TOKENIZER", "o200k_base")
     monkeypatch.setattr(shrink, "tiktoken", fake)
-    monkeypatch.setattr(shrink, "_TOKENIZER", None)
+    monkeypatch.setattr(shrink, "_tokenizer_cache", None)
     _, label = shrink._resolve_tokenizer()
     assert label == "tiktoken:o200k_base"
     assert fake.calls == ["o200k_base"]
@@ -212,7 +212,7 @@ def test_tokenizer_falls_back_on_unknown_encoding(
 ) -> None:
     monkeypatch.setenv("OMLX_SHRINK_TOKENIZER", "does-not-exist")
     monkeypatch.setattr(shrink, "tiktoken", _BrokenTiktoken())
-    monkeypatch.setattr(shrink, "_TOKENIZER", None)
+    monkeypatch.setattr(shrink, "_tokenizer_cache", None)
     encode, label = shrink._resolve_tokenizer()
     assert encode is None
     assert label == shrink._HEURISTIC_LABEL
@@ -223,7 +223,7 @@ def test_tokenizer_disabled_by_heuristic_setting(
 ) -> None:
     monkeypatch.setenv("OMLX_SHRINK_TOKENIZER", "off")
     monkeypatch.setattr(shrink, "tiktoken", _FakeTiktoken())
-    monkeypatch.setattr(shrink, "_TOKENIZER", None)
+    monkeypatch.setattr(shrink, "_tokenizer_cache", None)
     encode, label = shrink._resolve_tokenizer()
     assert encode is None
     assert label == shrink._HEURISTIC_LABEL

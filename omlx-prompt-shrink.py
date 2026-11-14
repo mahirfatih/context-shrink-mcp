@@ -56,7 +56,7 @@ logger.addHandler(logging.StreamHandler(sys.stderr))
 logger.setLevel(logging.INFO)
 
 _HEURISTIC_LABEL = "heuristic(chars/4)"
-_TOKENIZER: tuple[Any, str] | None = None
+_tokenizer_cache: tuple[Any, str] | None = None
 
 
 def _resolve_tokenizer() -> tuple[Any, str]:
@@ -69,15 +69,15 @@ def _resolve_tokenizer() -> tuple[Any, str]:
     * a tiktoken encoding name (for example ``o200k_base``) - use that encoding.
     * ``heuristic`` / ``off`` / ``none`` / ``chars`` - always use the heuristic.
     """
-    global _TOKENIZER
-    if _TOKENIZER is not None:
-        return _TOKENIZER
+    global _tokenizer_cache
+    if _tokenizer_cache is not None:
+        return _tokenizer_cache
 
     setting = os.environ.get("OMLX_SHRINK_TOKENIZER", "auto").strip().lower()
     fallback: tuple[Any, str] = (None, _HEURISTIC_LABEL)
     if setting in {"heuristic", "off", "none", "chars", ""}:
-        _TOKENIZER = fallback
-        return _TOKENIZER
+        _tokenizer_cache = fallback
+        return _tokenizer_cache
     if tiktoken is None:
         if setting != "auto":
             logger.warning(
@@ -86,25 +86,25 @@ def _resolve_tokenizer() -> tuple[Any, str]:
                 setting,
                 _HEURISTIC_LABEL,
             )
-        _TOKENIZER = fallback
-        return _TOKENIZER
+        _tokenizer_cache = fallback
+        return _tokenizer_cache
 
     encoding_name = "cl100k_base" if setting == "auto" else setting
     try:
         encoder = tiktoken.get_encoding(encoding_name)
     except Exception as error:  # network/IO failure or unknown encoding
         logger.warning("tokenizer %r unavailable (%s); using %s", encoding_name, error, _HEURISTIC_LABEL)
-        _TOKENIZER = fallback
-        return _TOKENIZER
+        _tokenizer_cache = fallback
+        return _tokenizer_cache
 
-    _TOKENIZER = (encoder.encode, f"tiktoken:{encoding_name}")
-    return _TOKENIZER
+    _tokenizer_cache = (encoder.encode, f"tiktoken:{encoding_name}")
+    return _tokenizer_cache
 
 
 server = MCPServer("oMLX Prompt Shrink")
 
 
-def _content_text(content: Any) -> str:
+def _content_to_text(content: Any) -> str:
     if content is None:
         return ""
     if isinstance(content, str):
@@ -126,7 +126,7 @@ def _estimate_tokens(messages: list[dict[str, Any]]) -> int:
     encode, _ = _resolve_tokenizer()
     if encode is not None:
         text = "\n".join(
-            _content_text(message.get("content", ""))
+            _content_to_text(message.get("content", ""))
             for message in messages
             if isinstance(message, dict)
         )
@@ -137,11 +137,11 @@ def _estimate_tokens(messages: list[dict[str, Any]]) -> int:
     chars = 0
     for message in messages:
         content = message.get("content", "") if isinstance(message, dict) else ""
-        chars += len(_content_text(content))
+        chars += len(_content_to_text(content))
     return max(1, int(math.ceil(chars / 4)))
 
 
-def estimate_context_tokens(
+def _estimate_capped_tokens(
     messages: list[dict[str, Any]],
     max_context_tokens: int = MAX_CONTEXT_TOKENS,
 ) -> int:
@@ -190,12 +190,12 @@ def _assemble_compaction(
     return [*leading, note, *keep]
 
 
-def _render_for_model(messages: list[dict[str, Any]]) -> str:
+def _render_messages_for_model(messages: list[dict[str, Any]]) -> str:
     lines: list[str] = []
     for message in messages:
         role = message.get("role", "?") if isinstance(message, dict) else "?"
         content = message.get("content", "") if isinstance(message, dict) else ""
-        lines.append(f"{role}: {_content_text(content)}")
+        lines.append(f"{role}: {_content_to_text(content)}")
     return "\n".join(lines)
 
 
@@ -271,7 +271,7 @@ def _summarize(
     for chunk in chunks:
         prompt = [
             {"role": "system", "content": SUMMARY_INSTRUCTIONS},
-            {"role": "user", "content": _render_for_model(chunk)},
+            {"role": "user", "content": _render_messages_for_model(chunk)},
         ]
         summaries.append(
             _call_chat_completions(prompt, base_url, api_key, model, summary_budget_tokens)
@@ -328,7 +328,7 @@ def trim_context(
             "messages": trimmed,
             "original_count": len(messages),
             "trimmed_count": len(trimmed),
-            "estimated_context_tokens": estimate_context_tokens(trimmed, max_context_tokens),
+            "estimated_context_tokens": _estimate_capped_tokens(trimmed, max_context_tokens),
         },
         ensure_ascii=False,
     )
