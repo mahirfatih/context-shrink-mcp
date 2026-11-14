@@ -26,6 +26,8 @@ names (kept for backwards compatibility) and the vendor-neutral
 * ``*_TOKENIZER``     - ``auto`` (default), a tiktoken encoding name, or
   ``heuristic``/``off``/``none``/``chars``
 * ``*_MAX_CONTEXT_TOKENS`` - default context budget (default 32768)
+* ``OPENAI_SHRINK_EXTRA_HEADERS`` - extra HTTP headers as a JSON object, for
+  gateways that need them (Azure OpenAI's ``api-key`` header, org ids, ...)
 """
 
 from __future__ import annotations
@@ -116,6 +118,27 @@ def _env_int(*names: str, default: int) -> int:
         logger.warning("%s=%r is not an integer; using %s", names[0], raw, default)
         return default
     return max(1, value)
+
+
+def _extra_headers() -> dict[str, str]:
+    """Optional extra HTTP headers as a JSON object (for gateways such as Azure).
+
+    Example::
+
+        OPENAI_SHRINK_EXTRA_HEADERS='{"api-key": "azure-secret"}'
+    """
+    raw = os.environ.get("OPENAI_SHRINK_EXTRA_HEADERS", "").strip()
+    if not raw:
+        return {}
+    try:
+        parsed = json.loads(raw)
+    except ValueError:
+        logger.warning("OPENAI_SHRINK_EXTRA_HEADERS is not valid JSON; ignoring it")
+        return {}
+    if not isinstance(parsed, dict):
+        logger.warning("OPENAI_SHRINK_EXTRA_HEADERS must be a JSON object; ignoring it")
+        return {}
+    return {str(key): str(value) for key, value in parsed.items()}
 
 
 # The legacy OMLX_SHRINK_* names win when both are set; the OPENAI_SHRINK_*
@@ -337,7 +360,7 @@ def _call_chat_completions(
         "max_tokens": max_tokens,
         "stream": False,
     }
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json", **_extra_headers()}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
     request = urllib.request.Request(

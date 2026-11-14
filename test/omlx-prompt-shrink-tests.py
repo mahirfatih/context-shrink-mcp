@@ -304,3 +304,54 @@ def test_tokenizer_honours_generic_alias(
     encode, label = shrink._resolve_tokenizer()
     assert encode is None
     assert label == shrink._HEURISTIC_LABEL
+
+
+# --- _extra_headers ----------------------------------------------------------
+def test_extra_headers_parses_json_object(
+    shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OPENAI_SHRINK_EXTRA_HEADERS", '{"api-key": "secret", "x-org": 42}')
+    assert shrink._extra_headers() == {"api-key": "secret", "x-org": "42"}
+
+
+def test_extra_headers_ignore_invalid_input(
+    shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("OPENAI_SHRINK_EXTRA_HEADERS", raising=False)
+    assert shrink._extra_headers() == {}
+    monkeypatch.setenv("OPENAI_SHRINK_EXTRA_HEADERS", "not-json")
+    assert shrink._extra_headers() == {}
+    monkeypatch.setenv("OPENAI_SHRINK_EXTRA_HEADERS", '["a", "b"]')
+    assert shrink._extra_headers() == {}
+
+
+def test_call_chat_completions_sends_extra_headers(
+    shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured: dict[str, object] = {}
+
+    class _FakeResponse:
+        def __enter__(self) -> _FakeResponse:
+            return self
+
+        def __exit__(self, *args: object) -> bool:
+            return False
+
+        def read(self) -> bytes:
+            return b'{"choices":[{"message":{"content":"summarized"}}]}'
+
+    def fake_urlopen(request: object, timeout: float | None = None) -> _FakeResponse:
+        captured["url"] = request.full_url
+        captured["headers"] = dict(request.headers)
+        return _FakeResponse()
+
+    monkeypatch.setattr(shrink.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setenv("OPENAI_SHRINK_EXTRA_HEADERS", '{"api-key": "secret"}')
+    result = shrink._call_chat_completions(
+        [{"role": "user", "content": "hi"}], "http://example.test/v1/", "tok", "m", 8
+    )
+    assert result == "summarized"
+    assert captured["url"] == "http://example.test/v1/chat/completions"
+    headers = captured["headers"]
+    assert headers.get("Api-key") == "secret"
+    assert headers.get("Authorization") == "Bearer tok"
