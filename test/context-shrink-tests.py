@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import logging
 from pathlib import Path
 from types import ModuleType
 
@@ -429,3 +430,49 @@ def test_call_chat_completions_sends_extra_headers(
 # --- server identity ---------------------------------------------------------
 def test_server_display_name_is_context_shrink(shrink: ModuleType) -> None:
     assert shrink.server.name == "Context Shrink"
+
+
+# --- input hardening: log level and budget ---------------------------------
+
+
+def test_resolve_log_level_reads_env(
+    shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CONTEXT_SHRINK_LOG_LEVEL", "debug")
+    assert shrink._resolve_log_level() == (logging.DEBUG, "")
+    monkeypatch.setenv("CONTEXT_SHRINK_LOG_LEVEL", "not-a-level")
+    assert shrink._resolve_log_level() == (logging.INFO, "not-a-level")
+
+
+def test_coerce_budget_clamps_to_sane_range(shrink: ModuleType) -> None:
+    assert shrink._coerce_budget(500) == 500
+    assert shrink._coerce_budget(0) == 1
+    assert shrink._coerce_budget(-10) == 1
+    assert shrink._coerce_budget(10_000_000) == shrink.MAX_CONTEXT_TOKENS_CEILING
+    assert shrink._coerce_budget("not-an-int") == shrink.MAX_CONTEXT_TOKENS
+
+
+def test_estimate_context_clamps_out_of_range_budget(shrink: ModuleType) -> None:
+    payload = json.loads(
+        shrink.estimate_context([{"role": "user", "content": "x" * 40}], max_context_tokens=-5)
+    )
+    assert payload["max_context_tokens"] == 1
+
+
+def test_compact_clamps_non_positive_keep_last(shrink: ModuleType) -> None:
+    payload = json.loads(
+        shrink.compact_context(
+            _long_history(), keep_last=-3, max_context_tokens=1000, summary="S"
+        )
+    )
+    assert payload["compacted"] is True
+    assert payload["kept_count"] == 1
+
+
+def test_chat_completions_url_warns_on_missing_scheme(
+    shrink: ModuleType, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.WARNING, logger="context-shrink"):
+        result = shrink._chat_completions_url("example.com/v1")
+    assert result == "example.com/v1/chat/completions"
+    assert "does not look like" in caplog.text

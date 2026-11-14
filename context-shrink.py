@@ -28,6 +28,7 @@ names are accepted first, then the legacy ``OMLX_SHRINK_*`` ones, then the
 * ``*_MAX_CONTEXT_TOKENS`` - default context budget (default 32768)
 * ``*_EXTRA_HEADERS`` - extra HTTP headers as a JSON object, for gateways that
   need them (Azure OpenAI's ``api-key`` header, org ids, ...)
+* ``*_LOG_LEVEL`` - stderr log level name (default ``INFO``)
 """
 
 from __future__ import annotations
@@ -39,6 +40,7 @@ import math
 import os
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from typing import Any, NoReturn
 
@@ -80,11 +82,6 @@ try:  # optional: a real tokenizer is used when available, otherwise a heuristic
 except Exception:  # pragma: no cover - optional dependency
     tiktoken = None
 
-logger = logging.getLogger("context-shrink")
-logger.addHandler(logging.StreamHandler(sys.stderr))
-logger.setLevel(logging.INFO)
-
-
 def _env_value(*names: str, default: str) -> str:
     """Return the first non-empty environment variable among ``names``."""
     for name in names:
@@ -92,6 +89,28 @@ def _env_value(*names: str, default: str) -> str:
         if value:
             return value
     return default
+
+
+def _resolve_log_level() -> tuple[int, str]:
+    """Return ``(level, invalid_name)`` from ``CONTEXT_SHRINK_LOG_LEVEL``."""
+    raw = _env_value(
+        "CONTEXT_SHRINK_LOG_LEVEL",
+        "OMLX_SHRINK_LOG_LEVEL",
+        "OPENAI_SHRINK_LOG_LEVEL",
+        default="INFO",
+    )
+    level = logging.getLevelName(raw.upper())
+    if isinstance(level, int):
+        return level, ""
+    return logging.INFO, raw
+
+
+_log_level, _bad_log_level = _resolve_log_level()
+logger = logging.getLogger("context-shrink")
+logger.addHandler(logging.StreamHandler(sys.stderr))
+logger.setLevel(_log_level)
+if _bad_log_level:
+    logger.warning("*_LOG_LEVEL=%r is not a valid level; using INFO", _bad_log_level)
 
 
 def _env_float(*names: str, default: float) -> float:
@@ -118,6 +137,27 @@ def _env_int(*names: str, default: int) -> int:
         logger.warning("%s=%r is not an integer; using %s", names[0], raw, default)
         return default
     return max(1, value)
+
+
+# A budget above this is almost certainly a unit mistake, and a huge one only
+# wastes memory; clamp caller- and env-supplied values to it.
+MAX_CONTEXT_TOKENS_CEILING = 1_000_000
+
+
+def _coerce_budget(value: int, *, ceiling: int = MAX_CONTEXT_TOKENS_CEILING) -> int:
+    """Clamp a caller-supplied context budget to a sane positive range."""
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        logger.warning("max_context_tokens=%r is not an integer; using %d", value, MAX_CONTEXT_TOKENS)
+        return MAX_CONTEXT_TOKENS
+    if number < 1:
+        logger.warning("max_context_tokens=%r is not positive; using 1", value)
+        return 1
+    if number > ceiling:
+        logger.warning("max_context_tokens=%r is too large; capping at %d", value, ceiling)
+        return ceiling
+    return number
 
 
 def _extra_headers() -> dict[str, str]:
@@ -366,6 +406,9 @@ def _chunk_messages(
 def _chat_completions_url(base_url: str) -> str:
     """Normalize a base URL to its ``/chat/completions`` endpoint."""
     url = base_url.strip().rstrip("/")
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        logger.warning("base URL %r does not look like an http(s) URL", base_url)
     if not url.endswith("/chat/completions"):
         url += "/chat/completions"
     return url
@@ -451,7 +494,16 @@ def estimate_context(
     messages: list[dict[str, Any]],
     max_context_tokens: int = MAX_CONTEXT_TOKENS,
 ) -> str:
-    """Estimate the current context size in tokens before sending it to the model."""
+    """Estimate the current context size in tokens before sending it to the model.
+
+    Example call::
+
+        estimate_context({
+            "messages": [{"role": "user", "content": "hello"}],
+            "max_context_tokens": 32768,
+        })
+    """
+    max_context_tokens = _coerce_budget(max_context_tokens)
     estimated = _estimate_tokens(messages)
     _, tokenizer = _resolve_tokenizer()
     return json.dumps(
@@ -473,7 +525,18 @@ def trim_context(
     keep_last: int = DEFAULT_KEEP_LAST,
     max_context_tokens: int = MAX_CONTEXT_TOKENS,
 ) -> str:
-    """Trim the oldest messages when the estimated context exceeds the model limit."""
+    """Trim the oldest messages when the estimated context exceeds the model limit.
+
+    Example call::
+
+        trim_context({
+            "messages": [...],
+            "keep_last": 8,
+            "max_context_tokens": 32768,
+        })
+    """
+    max_context_tokens = _coerce_budget(max_context_tokens)
+    keep_last = max(1, int(keep_last))
     trimmed = _trim_messages(messages, keep_last=keep_last, max_context_tokens=max_context_tokens)
     return json.dumps(
         {
@@ -506,7 +569,20 @@ def compact_context(
     via ``model``/``base_url`` (or the CONTEXT_SHRINK_MODEL / CONTEXT_SHRINK_BASE_URL
     environment variables). With neither, the tool returns a ``needs_summary``
     plan plus the exact prompt, and no message content is echoed back.
+
+    Example call::
+
+        compact_context({
+            "messages": [...],
+            "keep_last": 8,
+            "threshold": 0.8,
+            "summary": "…",  # omit to summarise with the model
+        })
     """
+    max_context_tokens = _coerce_budget(max_context_tokens)
+    keep_last = max(1, int(keep_last))
+    summary_budget_tokens = max(1, int(summary_budget_tokens))
+    threshold = min(max(float(threshold), 0.0), 1.0)
     tokens_before = _estimate_tokens(messages)
     threshold_tokens = int(max_context_tokens * threshold)
     leading, to_summarize, keep = _split_for_compaction(messages, keep_last)
