@@ -1,0 +1,12 @@
+{
+  "name": "context-shrink-js-tests",
+  "private": true,
+  "type": "module",
+  "description": "Node integration tests for the Context Shrink MCP server (official MCP JS SDK).",
+  "scripts": {
+    "test": "node --test live-omlx.test.mjs"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2"
+  }
+}
