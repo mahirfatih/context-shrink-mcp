@@ -134,7 +134,7 @@ değiştirmez (`compacted: false`).
 | Gereksinim | Sürüm / Notlar |
 | :--- | :--- |
 | **Python** | 3.10+ (`/opt/homebrew/bin/python3` ile test edildi) |
-| **MCP SDK** | `pip install mcp` |
+| **MCP SDK** | `pip install "mcp>=2.0"` |
 | **Tokenizer** *(opsiyonel)* | Gerçek token sayımı için `pip install tiktoken`; aksi hâlde karakter ÷ 4'e düşer |
 | **İstemci** | OpenCode (veya herhangi bir MCP istemcisi) |
 | **Model sunucusu** | oMLX veya başka bir yerel OpenAI-uyumlu sunucu (opsiyonel, model modu için) |
@@ -142,7 +142,7 @@ değiştirmez (`compacted: false`).
 ### 2. SDK'yı kurun
 
 ```bash
-pip install mcp
+pip install "mcp>=2.0"
 ```
 
 ### 3. Sunucuyu kopyalayın

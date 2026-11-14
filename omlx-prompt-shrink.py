@@ -1,16 +1,31 @@
 #!/usr/bin/env python3
-"""oMLX context guard MCP server.
+"""Generic OpenAI-compatible context guard MCP server.
 
-Keeps local OpenAI-compatible servers (oMLX, llama.cpp, LM Studio, ...) under
-their context window, with three levels of intervention:
+Works with any OpenAI-compatible chat-completions endpoint: oMLX, llama.cpp,
+LM Studio, Ollama, vLLM, KoboldCpp, the official OpenAI API, or any gateway.
+It keeps requests under their context window, with three levels of
+intervention:
 
 * ``estimate_context`` - measure only, no changes.
 * ``trim_context``     - drop the oldest messages.
 * ``compact_context``  - replace the oldest messages with a summary.
 
 The server is deliberately dependency-light: the MCP SDK plus the standard
-library. ``compact_context`` can summarise with the local model through the
-OpenAI-compatible endpoint, or accept a summary you already produced.
+library. ``compact_context`` can summarise with the model at
+``base_url``/``model``, or accept a summary you already produced.
+
+Configuration comes from environment variables. Both the ``OMLX_SHRINK_*``
+names (kept for backwards compatibility) and the vendor-neutral
+``OPENAI_SHRINK_*`` aliases are accepted:
+
+* ``*_BASE_URL``      - chat-completions endpoint (default
+  ``http://127.0.0.1:8000/v1``)
+* ``*_MODEL``         - model id for summarisation (empty = plan-only mode)
+* ``*_API_KEY``       - bearer token, sent only when non-empty
+* ``*_TIMEOUT``       - request timeout in seconds (default 180)
+* ``*_TOKENIZER``     - ``auto`` (default), a tiktoken encoding name, or
+  ``heuristic``/``off``/``none``/``chars``
+* ``*_MAX_CONTEXT_TOKENS`` - default context budget (default 32768)
 """
 
 from __future__ import annotations
@@ -23,37 +38,116 @@ import os
 import sys
 import urllib.error
 import urllib.request
-from typing import Any
+from typing import Any, NoReturn
 
-from mcp.server import MCPServer
+
+def _fail(message: str) -> NoReturn:
+    """Write a plain, actionable message to stderr and exit non-zero."""
+    sys.stderr.write(f"omlx-prompt-shrink: {message}\n")
+    raise SystemExit(1)
+
+
+# UTF-8 stdio: on Windows the console default (cp1252, cp936, ...) mangles the
+# non-ASCII message content that flows over the JSON-RPC channel, and some
+# MCP clients read stdout strictly. Reconfigure both streams when possible.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="replace")
+        except (OSError, ValueError):  # pragma: no cover - exotic stdio wrappers
+            pass
+
+if sys.version_info < (3, 10):  # noqa: UP036 - runtime guard for wrong interpreters
+    _fail(
+        f"requires Python 3.10 or newer (found {sys.version_info.major}."
+        f"{sys.version_info.minor}); point your MCP client at a newer "
+        "interpreter (see README Installation)"
+    )
+
+try:
+    from mcp.server import MCPServer
+except ImportError as error:  # missing package, or mcp 1.x without MCPServer
+    _fail(
+        "the 'mcp' package is missing or too old; install or upgrade it with "
+        "`pip install -U 'mcp>=2.0'` (the MCPServer class exists from 2.0 on). "
+        f"Underlying error: {error}"
+    )
 
 try:  # optional: a real tokenizer is used when available, otherwise a heuristic
     import tiktoken  # type: ignore
 except Exception:  # pragma: no cover - optional dependency
     tiktoken = None
 
-MAX_CONTEXT_TOKENS = 32768
+logger = logging.getLogger("omlx-prompt-shrink")
+logger.addHandler(logging.StreamHandler(sys.stderr))
+logger.setLevel(logging.INFO)
+
+
+def _env_value(*names: str, default: str) -> str:
+    """Return the first non-empty environment variable among ``names``."""
+    for name in names:
+        value = os.environ.get(name, "").strip()
+        if value:
+            return value
+    return default
+
+
+def _env_float(*names: str, default: float) -> float:
+    """Read a float environment variable, falling back on garbage input."""
+    raw = _env_value(*names, default="")
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        logger.warning("%s=%r is not a number; using %s", names[0], raw, default)
+        return default
+    return max(1.0, value)
+
+
+def _env_int(*names: str, default: int) -> int:
+    """Read an int environment variable, falling back on garbage input."""
+    raw = _env_value(*names, default="")
+    if not raw:
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        logger.warning("%s=%r is not an integer; using %s", names[0], raw, default)
+        return default
+    return max(1, value)
+
+
+# The legacy OMLX_SHRINK_* names win when both are set; the OPENAI_SHRINK_*
+# aliases make the server vendor-neutral for new deployments.
+DEFAULT_BASE_URL = _env_value(
+    "OMLX_SHRINK_BASE_URL",
+    "OPENAI_SHRINK_BASE_URL",
+    default="http://127.0.0.1:8000/v1",
+)
+DEFAULT_API_KEY = _env_value("OMLX_SHRINK_API_KEY", "OPENAI_SHRINK_API_KEY", default="")
+DEFAULT_MODEL = _env_value("OMLX_SHRINK_MODEL", "OPENAI_SHRINK_MODEL", default="")
+SUMMARY_TIMEOUT_SECONDS = _env_float(
+    "OMLX_SHRINK_TIMEOUT", "OPENAI_SHRINK_TIMEOUT", default=180.0
+)
+
+MAX_CONTEXT_TOKENS = _env_int(
+    "OMLX_SHRINK_MAX_CONTEXT_TOKENS",
+    "OPENAI_SHRINK_MAX_CONTEXT_TOKENS",
+    default=32768,
+)
 DEFAULT_KEEP_LAST = 8
 DEFAULT_THRESHOLD = 0.8
 DEFAULT_SUMMARY_BUDGET_TOKENS = 512
 
-DEFAULT_BASE_URL = os.environ.get("OMLX_SHRINK_BASE_URL", "http://127.0.0.1:8000/v1")
-DEFAULT_API_KEY = os.environ.get("OMLX_SHRINK_API_KEY", "")
-DEFAULT_MODEL = os.environ.get("OMLX_SHRINK_MODEL", "")
-SUMMARY_TIMEOUT_SECONDS = float(os.environ.get("OMLX_SHRINK_TIMEOUT", "180"))
-
 SUMMARY_INSTRUCTIONS = (
-    "You compact conversation history for a coding agent. Write a dense summary "
+    "You compact conversation history. Write a dense summary "
     "that preserves: the user's goal, every decision and constraint, file paths "
     "and code identifiers, commands that were run and their key results, and any "
     "unresolved question or next step. Omit greetings, restated instructions and "
     "redundant detail. Write plain prose in the same language as the conversation. "
     "Do not add a preamble such as 'Here is a summary'."
 )
-
-logger = logging.getLogger("omlx-prompt-shrink")
-logger.addHandler(logging.StreamHandler(sys.stderr))
-logger.setLevel(logging.INFO)
 
 _HEURISTIC_LABEL = "heuristic(chars/4)"
 _tokenizer_cache: tuple[Any, str] | None = None
@@ -62,7 +156,8 @@ _tokenizer_cache: tuple[Any, str] | None = None
 def _resolve_tokenizer() -> tuple[Any, str]:
     """Return ``(encode_callable_or_None, label)``, resolved once and cached.
 
-    ``OMLX_SHRINK_TOKENIZER`` controls the choice:
+    ``OMLX_SHRINK_TOKENIZER`` (alias: ``OPENAI_SHRINK_TOKENIZER``) controls the
+    choice:
 
     * ``auto`` (default) - use ``tiktoken``'s ``cl100k_base`` when installed;
       otherwise fall back to the character heuristic.
@@ -73,7 +168,9 @@ def _resolve_tokenizer() -> tuple[Any, str]:
     if _tokenizer_cache is not None:
         return _tokenizer_cache
 
-    setting = os.environ.get("OMLX_SHRINK_TOKENIZER", "auto").strip().lower()
+    setting = _env_value(
+        "OMLX_SHRINK_TOKENIZER", "OPENAI_SHRINK_TOKENIZER", default="auto"
+    ).lower()
     fallback: tuple[Any, str] = (None, _HEURISTIC_LABEL)
     if setting in {"heuristic", "off", "none", "chars", ""}:
         _tokenizer_cache = fallback
@@ -81,7 +178,7 @@ def _resolve_tokenizer() -> tuple[Any, str]:
     if tiktoken is None:
         if setting != "auto":
             logger.warning(
-                "OMLX_SHRINK_TOKENIZER=%r requested but tiktoken is not installed; "
+                "OPENAI_SHRINK_TOKENIZER=%r requested but tiktoken is not installed; "
                 "using %s",
                 setting,
                 _HEURISTIC_LABEL,
@@ -217,6 +314,14 @@ def _chunk_messages(
     return chunks
 
 
+def _chat_completions_url(base_url: str) -> str:
+    """Normalize a base URL to its ``/chat/completions`` endpoint."""
+    url = base_url.strip().rstrip("/")
+    if not url.endswith("/chat/completions"):
+        url += "/chat/completions"
+    return url
+
+
 def _call_chat_completions(
     prompt_messages: list[dict[str, Any]],
     base_url: str,
@@ -224,9 +329,7 @@ def _call_chat_completions(
     model: str,
     max_tokens: int,
 ) -> str:
-    url = base_url.rstrip("/")
-    if not url.endswith("/chat/completions"):
-        url = url + "/chat/completions"
+    url = _chat_completions_url(base_url)
     payload = {
         "model": model,
         "messages": prompt_messages,
@@ -441,4 +544,8 @@ def compact_context(
 
 
 if __name__ == "__main__":
-    asyncio.run(server.run_stdio_async())
+    try:
+        asyncio.run(server.run_stdio_async())
+    except (KeyboardInterrupt, BrokenPipeError):  # pragma: no cover - user interrupt
+        # A clean exit on Ctrl-C / closed pipe: the MCP client decides when to stop us.
+        pass

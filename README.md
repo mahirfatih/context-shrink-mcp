@@ -135,7 +135,7 @@ and leaves the list untouched (`compacted: false`) when it is already within
 | Requirement | Version / Notes |
 | :--- | :--- |
 | **Python** | 3.10+ (tested against `/opt/homebrew/bin/python3`) |
-| **MCP SDK** | `pip install mcp` |
+| **MCP SDK** | `pip install "mcp>=2.0"` |
 | **Tokenizer** *(optional)* | `pip install tiktoken` for real token counting; falls back to chars ÷ 4 otherwise |
 | **Client** | OpenCode (or any MCP client) |
 | **Model server** | oMLX or another local OpenAI-compatible server (optional, for model mode) |
@@ -143,7 +143,7 @@ and leaves the list untouched (`compacted: false`) when it is already within
 ### 2. Install the SDK
 
 ```bash
-pip install mcp
+pip install "mcp>=2.0"
 ```
 
 ### 3. Copy the server

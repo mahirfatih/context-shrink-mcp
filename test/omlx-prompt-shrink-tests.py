@@ -227,3 +227,80 @@ def test_tokenizer_disabled_by_heuristic_setting(
     encode, label = shrink._resolve_tokenizer()
     assert encode is None
     assert label == shrink._HEURISTIC_LABEL
+
+
+# --- _env_float -------------------------------------------------------------
+def test_env_float_parses_valid_value(
+    shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OMLX_SHRINK_TIMEOUT", "60.5")
+    assert shrink._env_float("OMLX_SHRINK_TIMEOUT", default=180.0) == 60.5
+
+
+def test_env_float_defaults_on_missing_and_garbage(
+    shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("OMLX_SHRINK_TIMEOUT", raising=False)
+    assert shrink._env_float("OMLX_SHRINK_TIMEOUT", default=180.0) == 180.0
+    monkeypatch.setenv("OMLX_SHRINK_TIMEOUT", "not-a-number")
+    assert shrink._env_float("OMLX_SHRINK_TIMEOUT", default=180.0) == 180.0
+
+
+def test_env_float_never_returns_zero_or_negative(
+    shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OMLX_SHRINK_TIMEOUT", "0")
+    assert shrink._env_float("OMLX_SHRINK_TIMEOUT", default=180.0) == 1.0
+    monkeypatch.setenv("OMLX_SHRINK_TIMEOUT", "-5")
+    assert shrink._env_float("OMLX_SHRINK_TIMEOUT", default=180.0) == 1.0
+
+
+def test_openai_shrink_alias_is_used_when_legacy_name_is_absent(
+    shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("OMLX_SHRINK_BASE_URL", raising=False)
+    monkeypatch.setenv("OPENAI_SHRINK_BASE_URL", "http://localhost:1234/v1")
+    assert (
+        shrink._env_value("OMLX_SHRINK_BASE_URL", "OPENAI_SHRINK_BASE_URL", default="d")
+        == "http://localhost:1234/v1"
+    )
+
+
+def test_legacy_name_wins_over_generic_alias(
+    shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("OMLX_SHRINK_MODEL", "legacy-model")
+    monkeypatch.setenv("OPENAI_SHRINK_MODEL", "generic-model")
+    assert (
+        shrink._env_value("OMLX_SHRINK_MODEL", "OPENAI_SHRINK_MODEL", default="")
+        == "legacy-model"
+    )
+
+
+# --- _chat_completions_url --------------------------------------------------
+@pytest.mark.parametrize(
+    ("base_url", "expected"),
+    [
+        ("http://127.0.0.1:8000/v1", "http://127.0.0.1:8000/v1/chat/completions"),
+        ("http://127.0.0.1:8000/v1/", "http://127.0.0.1:8000/v1/chat/completions"),
+        ("http://127.0.0.1:8000/v1/chat/completions", "http://127.0.0.1:8000/v1/chat/completions"),
+        ("  http://api.example.com/openai  ", "http://api.example.com/openai/chat/completions"),
+        ("https://api.openai.com/v1", "https://api.openai.com/v1/chat/completions"),
+    ],
+)
+def test_chat_completions_url_normalizes_base_url(
+    shrink: ModuleType, base_url: str, expected: str
+) -> None:
+    assert shrink._chat_completions_url(base_url) == expected
+
+
+def test_tokenizer_honours_generic_alias(
+    shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("OMLX_SHRINK_TOKENIZER", raising=False)
+    monkeypatch.setenv("OPENAI_SHRINK_TOKENIZER", "heuristic")
+    monkeypatch.setattr(shrink, "tiktoken", _FakeTiktoken())
+    monkeypatch.setattr(shrink, "_tokenizer_cache", None)
+    encode, label = shrink._resolve_tokenizer()
+    assert encode is None
+    assert label == shrink._HEURISTIC_LABEL
