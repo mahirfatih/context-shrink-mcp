@@ -475,8 +475,7 @@ context-shrink-mcp/
 ├── test/                    # Test runner + pytest birim testleri
 │   ├── test.sh              # Tek test runner (ruff + pytest)
 │   ├── README.md            # Test klasörü kılavuzu
-│   ├── conftest.py          # Sunucu modülünü yola göre yükler; ortak fixture'lar
-│   └── context-shrink-tests.py # Saf yardımcılar + tokenizer çözümleme
+│   └── context-shrink-tests.py # Saf yardımcılar + tokenizer çözümleme + fixture'lar
 ├── LICENSE                  # MIT
 └── .gitignore
 ```

@@ -45,7 +45,8 @@ File names follow one rule: **scripts and data files are kebab-case**, with the
 Python **test files carrying a `-tests` suffix** (for example
 `context-shrink-tests.py`). A hyphen is not legal in an importable module
 name, so `pytest.ini` pins `python_files = *-tests.py`; pytest imports the file
-by path. Names fixed by a tool — `conftest.py`, `pytest.ini` — keep their name.
+by path. A name fixed by a tool — `pytest.ini` — keeps its name; the shared
+fixtures live at the top of `context-shrink-tests.py`.
 
 Run a single file or test while iterating:
 

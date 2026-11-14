@@ -479,8 +479,7 @@ context-shrink-mcp/
 ├── test/                    # Test runner + pytest unit tests
 │   ├── test.sh              # Single test runner (ruff + pytest)
 │   ├── README.md            # Test folder guide
-│   ├── conftest.py          # Loads the server module by path; shared fixtures
-│   └── context-shrink-tests.py # Pure helpers + tokenizer resolution
+│   └── context-shrink-tests.py # Pure helpers + tokenizer resolution + fixtures
 ├── LICENSE                  # MIT
 └── .gitignore
 ```

@@ -7,10 +7,36 @@ MCP transport are involved.
 
 from __future__ import annotations
 
+import importlib.util
 import json
+from pathlib import Path
 from types import ModuleType
 
 import pytest
+
+MODULE_PATH = Path(__file__).resolve().parents[1] / "context-shrink.py"
+
+
+def _load_module() -> ModuleType:
+    """Import the single-file server by path (its name is not a module id)."""
+    spec = importlib.util.spec_from_file_location("context_shrink", MODULE_PATH)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture()
+def shrink() -> ModuleType:
+    """A freshly imported server module, so the tokenizer cache is empty."""
+    return _load_module()
+
+
+@pytest.fixture(autouse=True)
+def _force_heuristic(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Default every test to the deterministic, dependency-free token counter."""
+    monkeypatch.setenv("CONTEXT_SHRINK_TOKENIZER", "heuristic")
+
 
 # --- _content_to_text ---------------------------------------------------------
 

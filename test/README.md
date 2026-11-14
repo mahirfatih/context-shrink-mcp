@@ -11,8 +11,7 @@ suite itself is described in the [README](../README.md#-testing--ci).
 | Path | Purpose |
 | :--- | :--- |
 | [`test.sh`](./test.sh) | Single test runner. Installs dev deps, runs Ruff, then pytest. |
-| [`conftest.py`](./conftest.py) | Shared fixtures. Loads the server module by path and forces the deterministic token counter. |
-| [`context-shrink-tests.py`](./context-shrink-tests.py) | Unit tests for the pure helpers and the tokenizer resolution logic. |
+| [`context-shrink-tests.py`](./context-shrink-tests.py) | Unit tests for the pure helpers and the tokenizer resolution logic; also defines the shared `shrink` fixture and the autouse heuristic token counter. |
 
 ## Quick start
 
