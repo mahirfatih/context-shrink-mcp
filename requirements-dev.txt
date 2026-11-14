@@ -1,5 +1,5 @@
 # Development-only dependencies (the server itself needs only `mcp`).
-mcp
+mcp>=2.0,<3.0
 pytest
 ruff
 # optional: closer token counts in tests and at runtime
