@@ -84,24 +84,23 @@ _(Arayüz yok — bu başsız (headless) bir MCP sunucusudur. Araç çıktısı 
 ```mermaid
 flowchart LR
     classDef client fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
-    classDef entry fill:#fff3e0,stroke:#ef6c00,color:#e65100
-    classDef tool fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
-    classDef step fill:#f3e5f5,stroke:#6a1b9a,color:#4a148c
-    classDef external fill:#fce4ec,stroke:#c2185b,color:#880e4f
+    classDef decision fill:#fff3e0,stroke:#ef6c00,color:#e65100
+    classDef action fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    classDef model fill:#fce4ec,stroke:#c2185b,color:#880e4f
 
-    Client["💻 OpenCode<br/>(MCP istemcisi)"]:::client
-    Entry["🚪 Giriş noktası<br/>omlx-prompt-shrink.py"]:::entry
+    Client["🧑‍💻 Kod ajanınız"]:::client
+    Client -->|"her istekten önce"| Fits{"Bağlam penceresine<br/>sığıyor mu?"}:::decision
 
-    Client -->|"araç çağrısı"| Entry
+    Fits -->|"evet"| Model
+    Fits -->|"hayır"| Choice{"Ne yapılmalı?"}:::decision
 
-    Entry --> Est["📊 estimate_context<br/>karakter ÷ 4"]:::tool
-    Entry --> Trim["✂️ trim_context<br/>en eski mesajları at"]:::tool
-    Entry --> Compact["🗜️ compact_context<br/>en eski mesajları özetle"]:::tool
+    Choice -->|"sadece ölç"| Measure["📊 Boyutu bildir<br/>hiçbir şey değişmez"]:::action
+    Choice -->|"eskileri at"| Trim["✂️ Geçmişi kısalt<br/>en yeni mesajlar kalır"]:::action
+    Choice -->|"özetle"| Compact["🗜️ En eski kısmı özetle<br/>son mesajlar birebir korunur"]:::action
 
-    Compact --> Split["✂️ split_for_compaction<br/>baş / özetlenecek / korunacak"]:::step
-    Compact --> Sum["📝 _summarize<br/>parçalı, yerel model"]:::step
-    Sum --> Chat["🌐 _call_chat_completions<br/>OpenAI-uyumlu"]:::step
-    Chat -->|"POST /chat/completions"| Endpoint["🤖 Yerel model (oMLX)"]:::external
+    Trim --> Model
+    Compact --> Model
+    Model["🤖 Yerel model<br/>(oMLX)"]:::model
 ```
 
 ---

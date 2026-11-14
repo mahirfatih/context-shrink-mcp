@@ -84,24 +84,23 @@ _(No UI — this is a headless MCP server. Tool output is JSON on stdio.)_
 ```mermaid
 flowchart LR
     classDef client fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
-    classDef entry fill:#fff3e0,stroke:#ef6c00,color:#e65100
-    classDef tool fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
-    classDef step fill:#f3e5f5,stroke:#6a1b9a,color:#4a148c
-    classDef external fill:#fce4ec,stroke:#c2185b,color:#880e4f
+    classDef decision fill:#fff3e0,stroke:#ef6c00,color:#e65100
+    classDef action fill:#e8f5e9,stroke:#2e7d32,color:#1b5e20
+    classDef model fill:#fce4ec,stroke:#c2185b,color:#880e4f
 
-    Client["💻 OpenCode<br/>(MCP client)"]:::client
-    Entry["🚪 Entry point<br/>omlx-prompt-shrink.py"]:::entry
+    Client["🧑‍💻 Your coding agent"]:::client
+    Client -->|"before every request"| Fits{"Does it fit the<br/>context window?"}:::decision
 
-    Client -->|"tool call"| Entry
+    Fits -->|"yes"| Model
+    Fits -->|"no"| Choice{"What should happen?"}:::decision
 
-    Entry --> Est["📊 estimate_context<br/>chars ÷ 4"]:::tool
-    Entry --> Trim["✂️ trim_context<br/>drop oldest messages"]:::tool
-    Entry --> Compact["🗜️ compact_context<br/>summarise oldest messages"]:::tool
+    Choice -->|"measure only"| Measure["📊 Report the size<br/>nothing is changed"]:::action
+    Choice -->|"drop oldest"| Trim["✂️ Shorten the history<br/>newest messages stay"]:::action
+    Choice -->|"summarise"| Compact["🗜️ Summarise the oldest part<br/>recent messages stay word-for-word"]:::action
 
-    Compact --> Split["✂️ split_for_compaction<br/>leading / to-summarise / keep"]:::step
-    Compact --> Sum["📝 _summarize<br/>chunked, local model"]:::step
-    Sum --> Chat["🌐 _call_chat_completions<br/>OpenAI-compatible"]:::step
-    Chat -->|"POST /chat/completions"| Endpoint["🤖 Local model (oMLX)"]:::external
+    Trim --> Model
+    Compact --> Model
+    Model["🤖 Local model<br/>(oMLX)"]:::model
 ```
 
 
