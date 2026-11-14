@@ -38,14 +38,16 @@ Everything ships in a single file, `context-shrink.py`. Keep it that way:
 
 ## Tests
 
-Add tests under `test/`. The server module is loaded by path (its filename is
+Add tests under `test/py/`. The server module is loaded by path (its filename is
 not a valid Python identifier), and each test gets a fresh module instance, so
 the lazily cached tokenizer resets automatically. Never call the network in a
 test — mock the tokenizer or the summariser endpoint instead.
 
-`context-shrink-tests.py` holds the unit tests and the shared fixtures;
-`context-shrink-mcp-tests.py` spawns the server and exercises the real STDIO
-transport (handshake, `tools/list`, one `tools/call`), still without the network.
+`test/py/context-shrink-tests.py` holds the unit tests and the shared fixtures;
+`test/py/context-shrink-mcp-tests.py` spawns the server and exercises the real
+STDIO transport (handshake, `tools/list`, one `tools/call`), still without the
+network. The full suite map, the flags and the opt-in live tests are in
+[`docs/testing/TESTING.md`](./docs/testing/TESTING.md).
 
 ### File names
 
@@ -59,8 +61,8 @@ fixtures live at the top of `context-shrink-tests.py`.
 Run a single file or test while iterating:
 
 ```bash
-./test/test.sh --only test/context-shrink-tests.py
-./test/test.sh --only test/context-shrink-tests.py::test_compact_uses_provided_summary
+./test/test.sh --only test/py/context-shrink-tests.py
+./test/test.sh --only test/py/context-shrink-tests.py::test_compact_uses_provided_summary
 ```
 
 ## Commit conventions

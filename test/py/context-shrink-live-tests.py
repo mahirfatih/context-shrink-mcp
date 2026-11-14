@@ -11,7 +11,7 @@ unless you opt in, so the default ``pytest`` run stays offline and green:
 
 Then run just this file:
 
-    ./test/test.sh --no-install --only test/context-shrink-live-tests.py
+    ./test/test.sh --no-install --only test/py/context-shrink-live-tests.py
 
 The API key is read from the environment and is never written into this file.
 The whole module skips when ``CONTEXT_SHRINK_LIVE`` is unset or the endpoint is
@@ -30,7 +30,7 @@ from types import ModuleType
 
 import pytest
 
-MODULE_PATH = Path(__file__).resolve().parents[1] / "context-shrink.py"
+MODULE_PATH = Path(__file__).resolve().parents[2] / "context-shrink.py"
 
 BASE_URL = os.environ.get("CONTEXT_SHRINK_BASE_URL", "http://127.0.0.1:8000/v1")
 API_KEY = os.environ.get("CONTEXT_SHRINK_API_KEY", "")

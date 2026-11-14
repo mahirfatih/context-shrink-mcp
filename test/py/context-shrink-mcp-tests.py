@@ -17,7 +17,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-MODULE_PATH = Path(__file__).resolve().parents[1] / "context-shrink.py"
+MODULE_PATH = Path(__file__).resolve().parents[2] / "context-shrink.py"
 _TIMEOUT_SECONDS = 15
 
 
