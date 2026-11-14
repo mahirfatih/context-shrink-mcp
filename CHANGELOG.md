@@ -55,10 +55,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Project name is **Context Shrink**: the server file is `context-shrink.py` and
-  the repository is `context-shrink-mcp`. The MCP server display name is
-  **Context Shrink**, so tools are grouped under `tools.Context_Shrink.*`; the
-  tool names themselves are unchanged.
+- Project name is **Context Shrink**: the server module is `context_shrink.py`
+  (with a `context-shrink.py` shim) and the repository is `context-shrink-mcp`.
+  The MCP server display name is **Context Shrink**, so tools are grouped under
+  `tools.Context_Shrink.*`; the tool names themselves are unchanged.
+- Installable as a package: `pyproject.toml` exposes the `context-shrink` console
+  script, so the server can be run with `uvx --from context-shrink-mcp
+  context-shrink` (or straight from GitHub) instead of copying a file by hand.
+  Published to PyPI as [`context-shrink-mcp`](https://pypi.org/project/context-shrink-mcp/),
+  also installable with `pip install context-shrink-mcp`.
 - `estimate_context` output now includes a `tokenizer` field.
 - Positioned as a generic OpenAI-compatible context guard: any
   `/v1/chat/completions` endpoint works (llama.cpp, LM Studio, Ollama, vLLM,
@@ -80,3 +85,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   link to the MCP Python SDK to both READMEs.
 - Added `examples/python-client.py`, a runnable MCP client (list tools + call
   one), linked from both READMEs.
+- Added an "Install (one line)" section to both READMEs and
+  [`docs/guides/RELEASING.md`](./docs/guides/RELEASING.md) for versioning,
+  building and publishing.

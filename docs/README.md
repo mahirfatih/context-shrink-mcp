@@ -12,7 +12,7 @@ Everything here is written in **English**. The Turkish quick tour is
 
 | Folder | The question it answers | Written or generated |
 | :--- | :--- | :--- |
-| [`guides/`](./guides) | How do I move from the old project name | written |
+| [`guides/`](./guides) | How do I move from the old project name or cut a release | written |
 | [`reference/`](./reference) | What endpoint, headers and errors does the server rely on | written |
 | [`testing/`](./testing) | How do I verify the server | written |
 
@@ -26,6 +26,8 @@ Everything here is written in **English**. The Turkish quick tour is
 - [`guides/MIGRATION.md`](./guides/MIGRATION.md) — renaming from oMLX Prompt Shrink
   to Context Shrink: file path, tool namespace, repository and environment
   variables.
+- [`guides/RELEASING.md`](./guides/RELEASING.md) — version bump, `uv build`, the
+  TestPyPI/PyPI publish and the from-GitHub alternative.
 
 ## Reference — what the server relies on
 

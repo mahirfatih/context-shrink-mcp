@@ -3,6 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![MCP](https://img.shields.io/badge/MCP-stdio-lightgrey)
 ![Client](https://img.shields.io/badge/client-OpenCode-green)
+[![PyPI](https://img.shields.io/pypi/v/context-shrink-mcp)](https://pypi.org/project/context-shrink-mcp/)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 🌐 [English](./README.md) · **Türkçe**
@@ -267,6 +268,46 @@ değiştirmez (`compacted: false`).
 
 ## 🚀 Kurulum ve Hızlı Başlangıç
 
+### Tek satır kurulum
+
+Paket PyPI'de: [`context-shrink-mcp`](https://pypi.org/project/context-shrink-mcp/).
+
+```bash
+pip install context-shrink-mcp     # paket + `context-shrink` komutu
+```
+
+Ya da kurulumu atlayıp `uvx`'in çekip çalıştırmasına bırakın — depo (checkout) ve
+elle kopyalama yok (bir kez [`uv`](https://docs.astral.sh/uv/) kurun). Sunucuyu
+OpenCode'a tek satırda kaydedin:
+
+```bash
+# PyPI'den
+opencode mcp add context-shrink --global -- uvx --from context-shrink-mcp context-shrink
+
+# ya da doğrudan GitHub'dan (paket dizinine gerek yok)
+opencode mcp add context-shrink --global -- uvx --from git+https://github.com/mahirfatih/context-shrink-mcp context-shrink
+```
+
+`uvx`, `mcp` bağımlılığını izole bir ortamda çözer ve sunucuyu stdio üzerinden
+çalıştırır. Sürümü `context-shrink-mcp@1.0.0` (PyPI) veya
+`…context-shrink-mcp@v1.0.0` (GitHub) ile sabitleyin.
+
+Model modunu aynı komutta etkinleştirin:
+
+```bash
+opencode mcp add context-shrink --global \
+  --env CONTEXT_SHRINK_BASE_URL=http://127.0.0.1:8000/v1 \
+  --env CONTEXT_SHRINK_MODEL=Qwen3.6-35B-A3B-4bit \
+  --env CONTEXT_SHRINK_API_KEY=omlx-... \
+  -- uvx --from context-shrink-mcp context-shrink
+```
+
+> `--global` olmadan `opencode mcp add`, `~/.config/opencode/opencode.jsonc`
+> yerine proje yapılandırmasına (`./opencode.jsonc`) yazar.
+
+Aşağıdaki numaralı adımlar depo (checkout) yoludur — dosyayı doğrudan ya da özel
+bir sanal ortamdan çalıştırmak için kullanın.
+
 ### 1. Gereksinimler
 
 | Gereksinim | Sürüm / Notlar |
@@ -285,7 +326,7 @@ pip install "mcp>=2.0"
 
 ### 3. Sunucuyu kopyalayın
 
-`context-shrink.py` dosyasını seçtiğiniz bir dizine kopyalayın (örneğin `~/.config/opencode/mcp/`).
+`context_shrink.py` dosyasını seçtiğiniz bir dizine kopyalayın (örneğin `~/.config/opencode/mcp/`). Depo (checkout), kısa çizgili ada işaret eden mevcut kurulumlar için aynı modülü çalıştıran dört satırlık bir `context-shrink.py` shim'i de içerir.
 
 > **Not:** `command` dizisindeki `python3` beklediğiniz yorumlayıcı olmayabilir —
 > kurulumunuza göre `/opt/homebrew/bin/python3`, `/usr/bin/python3` veya başka bir
@@ -304,7 +345,7 @@ Sunucuyu OpenCode yapılandırmanıza (`~/.config/opencode/opencode.jsonc`) ekle
         "type": "local",
         "command": [
           "python3",
-          "/absolute/path/to/context-shrink.py"
+          "/absolute/path/to/context_shrink.py"
         ],
         "timeout": 180000
       }
@@ -345,7 +386,7 @@ deposunda belgelenmiştir. Oradaki OpenCode girdisi, sunucuyu özel bir sanal or
         "type": "local",
         "command": [
           "/absolute/path/to/context-shrink-venv/bin/python",
-          "/absolute/path/to/context-shrink.py"
+          "/absolute/path/to/context_shrink.py"
         ],
         "environment": {
           "CONTEXT_SHRINK_MODEL": "Qwen3.6-35B-A3B-4bit",
@@ -478,8 +519,8 @@ her biri sunucuyu stdio üzerinden başlatır, araçları listeler ve
 `estimate_context` çağırır.
 
 ```bash
-python examples/python-client.py                          # ./context-shrink.py kullanır
-python examples/python-client.py /yol/context-shrink.py
+python examples/python-client.py                          # ./context_shrink.py kullanır
+python examples/python-client.py /yol/context_shrink.py
 
 cd examples && npm install && node js-client.js           # aynı istemcinin Node sürümü
 ```
@@ -493,7 +534,9 @@ Node 18+ ve bir kez `npm install` gerektirir.
 
 ```
 context-shrink-mcp/
-├── context-shrink.py        # Tek dosyalık MCP sunucusu (ürünün tamamı)
+├── context_shrink.py        # Tek dosyalık MCP sunucusu (ürünün tamamı)
+├── context-shrink.py        # Yukarıdaki modülü çalıştıran dört satırlık shim
+├── pyproject.toml           # Paketleme + `context-shrink` konsol betiği
 ├── README.md                # İngilizce hızlı tur
 ├── README.tr.md             # Türkçe hızlı tur
 ├── CONTRIBUTING.md          # Kurulum, testler, commit kuralları
@@ -501,6 +544,7 @@ context-shrink-mcp/
 ├── docs/                    # Dokümantasyon ağacı (bkz. docs/README.md)
 │   ├── README.md            # Doküman haritası
 │   ├── guides/MIGRATION.md  # Yeniden adlandırma / geçiş notları
+│   ├── guides/RELEASING.md  # Sürüm, derleme ve yayın adımları
 │   ├── reference/OPENAI-API-REFERENCE.md  # Uç nokta, başlıklar, hatalar
 │   └── testing/TESTING.md   # Paketler, runner, canlı testler
 ├── requirements.txt         # Çalışma zamanı bağımlılığı (mcp)
@@ -545,7 +589,7 @@ context-shrink-mcp/
 Sunucuyu elle, bir istemci üzerinden çalıştırmak için:
 
 ```bash
-python3 context-shrink.py   # stdio sunucusunu başlatır; durdurmak için Ctrl-C
+python3 context_shrink.py   # stdio sunucusunu başlatır; durdurmak için Ctrl-C
 ```
 
 ---
@@ -554,13 +598,16 @@ python3 context-shrink.py   # stdio sunucusunu başlatır; durdurmak için Ctrl-
 
 - [README.md](./README.md) — İngilizce sürüm.
 - [README.tr.md](./README.tr.md) — bu dosya.
-- [context-shrink.py](./context-shrink.py) — araç şemaları ve davranışın kaynağı.
+- [context_shrink.py](./context_shrink.py) — araç şemaları ve davranışın kaynağı.
+- [pyproject.toml](./pyproject.toml) — paketleme ve `context-shrink` konsol betiği.
+- [pypi.org/project/context-shrink-mcp](https://pypi.org/project/context-shrink-mcp/) — yayınlanan paket.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — geliştirme kurulumu, testler ve commit kuralları.
 - [CHANGELOG.md](./CHANGELOG.md) — sürüm notları.
 - [docs/README.md](./docs/README.md) — dokümantasyon haritası.
 - [docs/reference/OPENAI-API-REFERENCE.md](./docs/reference/OPENAI-API-REFERENCE.md) — sunucunun dayandığı uç nokta, başlıklar ve hata biçimleri.
 - [docs/testing/TESTING.md](./docs/testing/TESTING.md) — paketler, runner ve opt-in canlı testler.
 - [docs/guides/MIGRATION.md](./docs/guides/MIGRATION.md) — oMLX Prompt Shrink'tan geçiş.
+- [docs/guides/RELEASING.md](./docs/guides/RELEASING.md) — sürüm, derleme ve yayın adımları.
 - [examples/python-client.py](./examples/python-client.py) — araçları listeleyip birini çağıran çalıştırılabilir bir MCP istemcisi.
 - [examples/js-client.js](./examples/js-client.js) — aynı istemcinin resmi MCP JS SDK ile yazılmış Node sürümü.
 - [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) — bu dosyanın üzerine kurulduğu taşıma katmanı ve `MCPServer` API'si.

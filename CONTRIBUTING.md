@@ -28,7 +28,7 @@ The runner and both checks run in CI (`.github/workflows/ci.yml`). CI is
 
 ## The server
 
-Everything ships in a single file, `context-shrink.py`. Keep it that way:
+Everything ships in a single module, `context_shrink.py`. Keep it that way:
 
 - Standard library only at runtime, except the required `mcp` SDK.
 - `tiktoken` must stay **optional** — import it defensively and fall back to the
@@ -36,12 +36,17 @@ Everything ships in a single file, `context-shrink.py`. Keep it that way:
 - New behaviour belongs in a pure helper (easy to unit-test) with the MCP tool
   acting as a thin JSON wrapper.
 
+The importable module is what `pyproject.toml` packages and what the
+`context-shrink` console script calls. The hyphenated `context-shrink.py` at the
+root is only a four-line shim that runs the same module for existing setups; keep
+it in sync by changing nothing but the module.
+
 ## Tests
 
-Add tests under `test/py/`. The server module is loaded by path (its filename is
-not a valid Python identifier), and each test gets a fresh module instance, so
-the lazily cached tokenizer resets automatically. Never call the network in a
-test — mock the tokenizer or the summariser endpoint instead.
+Add tests under `test/py/`. The server module is imported by path with a fresh
+module instance per test, so the lazily cached tokenizer resets automatically.
+Never call the network in a test — mock the tokenizer or the summariser endpoint
+instead.
 
 `test/py/context-shrink-tests.py` holds the unit tests and the shared fixtures;
 `test/py/context-shrink-mcp-tests.py` spawns the server and exercises the real
@@ -76,13 +81,20 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 Common types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`. Keep
 each commit to one logical change.
 
+## Releasing
+
+A release bumps `version` in `pyproject.toml`, builds with `uv build` and
+publishes with `uv publish`. The full checklist — including the from-GitHub
+alternative that needs no PyPI upload — is in
+[`docs/guides/RELEASING.md`](./docs/guides/RELEASING.md).
+
 ## Syncing a local OpenCode install
 
 If you run the server from OpenCode, keep the deployed copy in step with the
 repository (for example by copying or symlinking the file):
 
 ```bash
-cp context-shrink.py ~/.config/opencode/mcp/context-shrink.py
+cp context_shrink.py ~/.config/opencode/mcp/context_shrink.py
 ```
 
 OpenCode reloads MCP servers when configuration changes; run `/reload` in the TUI

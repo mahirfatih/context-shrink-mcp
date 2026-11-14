@@ -3,6 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![MCP](https://img.shields.io/badge/MCP-stdio-lightgrey)
 ![Client](https://img.shields.io/badge/client-OpenCode-green)
+[![PyPI](https://img.shields.io/pypi/v/context-shrink-mcp)](https://pypi.org/project/context-shrink-mcp/)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 🌐 **English** · [Türkçe](./README.tr.md)
@@ -269,6 +270,46 @@ and leaves the list untouched (`compacted: false`) when it is already within
 
 ## 🚀 Installation & Quick Start
 
+### Install (one line)
+
+The package is on PyPI: [`context-shrink-mcp`](https://pypi.org/project/context-shrink-mcp/).
+
+```bash
+pip install context-shrink-mcp     # the package + the `context-shrink` command
+```
+
+Or skip the install and let `uvx` fetch and run it — no checkout, no manual copy
+(install [`uv`](https://docs.astral.sh/uv/) once). Register the server with
+OpenCode in one line:
+
+```bash
+# from PyPI
+opencode mcp add context-shrink --global -- uvx --from context-shrink-mcp context-shrink
+
+# or straight from GitHub (no package index needed)
+opencode mcp add context-shrink --global -- uvx --from git+https://github.com/mahirfatih/context-shrink-mcp context-shrink
+```
+
+`uvx` resolves the `mcp` dependency in an isolated environment and runs the
+server over stdio. Pin a version with `context-shrink-mcp@1.0.0` (PyPI) or
+`…context-shrink-mcp@v1.0.0` (GitHub).
+
+Enable model mode on the same command:
+
+```bash
+opencode mcp add context-shrink --global \
+  --env CONTEXT_SHRINK_BASE_URL=http://127.0.0.1:8000/v1 \
+  --env CONTEXT_SHRINK_MODEL=Qwen3.6-35B-A3B-4bit \
+  --env CONTEXT_SHRINK_API_KEY=omlx-... \
+  -- uvx --from context-shrink-mcp context-shrink
+```
+
+> Without `--global`, `opencode mcp add` writes to the project config
+> (`./opencode.jsonc`) instead of `~/.config/opencode/opencode.jsonc`.
+
+The numbered steps below are the repository-checkout path — use them to run the
+file directly or from a dedicated virtualenv.
+
 ### 1. Prerequisites
 
 | Requirement | Version / Notes |
@@ -287,7 +328,7 @@ pip install "mcp>=2.0"
 
 ### 3. Copy the server
 
-Copy `context-shrink.py` into a directory of your choice (for example `~/.config/opencode/mcp/`).
+Copy `context_shrink.py` into a directory of your choice (for example `~/.config/opencode/mcp/`). A repository checkout also ships a four-line `context-shrink.py` shim that runs the same module, kept for existing setups that point at the hyphenated name.
 
 > **Note:** The `python3` in the `command` array may not be the one you expect —
 > depending on your setup it could be `/opt/homebrew/bin/python3`, `/usr/bin/python3`,
@@ -306,7 +347,7 @@ Add the server to your OpenCode config (`~/.config/opencode/opencode.jsonc`):
         "type": "local",
         "command": [
           "python3",
-          "/absolute/path/to/context-shrink.py"
+          "/absolute/path/to/context_shrink.py"
         ],
         "timeout": 180000
       }
@@ -347,7 +388,7 @@ points the summariser at the local model:
         "type": "local",
         "command": [
           "/absolute/path/to/context-shrink-venv/bin/python",
-          "/absolute/path/to/context-shrink.py"
+          "/absolute/path/to/context_shrink.py"
         ],
         "environment": {
           "CONTEXT_SHRINK_MODEL": "Qwen3.6-35B-A3B-4bit",
@@ -481,8 +522,8 @@ Compaction flow, agent mode (two calls):
 starts the server over stdio, lists its tools and calls `estimate_context`.
 
 ```bash
-python examples/python-client.py                          # uses ./context-shrink.py
-python examples/python-client.py /path/to/context-shrink.py
+python examples/python-client.py                          # uses ./context_shrink.py
+python examples/python-client.py /path/to/context_shrink.py
 
 cd examples && npm install && node js-client.js           # same client in Node
 ```
@@ -496,7 +537,9 @@ Node client needs Node 18+ and `npm install` once.
 
 ```
 context-shrink-mcp/
-├── context-shrink.py        # Single-file MCP server (the whole product)
+├── context_shrink.py        # Single-file MCP server (the whole product)
+├── context-shrink.py        # Four-line shim that runs the module above
+├── pyproject.toml           # Packaging + the `context-shrink` console script
 ├── README.md                # English quick tour
 ├── README.tr.md             # Turkish quick tour
 ├── CONTRIBUTING.md          # Setup, tests, commit conventions
@@ -504,6 +547,7 @@ context-shrink-mcp/
 ├── docs/                    # Documentation tree (see docs/README.md)
 │   ├── README.md            # Doc map
 │   ├── guides/MIGRATION.md  # Rename / migration notes
+│   ├── guides/RELEASING.md  # Version, build and publish steps
 │   ├── reference/OPENAI-API-REFERENCE.md  # Endpoint, headers, errors
 │   └── testing/TESTING.md   # Suites, runner, live tests
 ├── requirements.txt         # Runtime dependency (mcp)
@@ -548,7 +592,7 @@ context-shrink-mcp/
 Run the server by hand to exercise it through a client:
 
 ```bash
-python3 context-shrink.py   # starts the stdio server; Ctrl-C to stop
+python3 context_shrink.py   # starts the stdio server; Ctrl-C to stop
 ```
 
 ---
@@ -557,13 +601,16 @@ python3 context-shrink.py   # starts the stdio server; Ctrl-C to stop
 
 - [README.md](./README.md) — this file.
 - [README.tr.md](./README.tr.md) — Turkish translation.
-- [context-shrink.py](./context-shrink.py) — source of truth for tool schemas and behaviour.
+- [context_shrink.py](./context_shrink.py) — source of truth for tool schemas and behaviour.
+- [pyproject.toml](./pyproject.toml) — packaging and the `context-shrink` console script.
+- [pypi.org/project/context-shrink-mcp](https://pypi.org/project/context-shrink-mcp/) — the published package.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — development setup, tests, and commit conventions.
 - [CHANGELOG.md](./CHANGELOG.md) — release notes.
 - [docs/README.md](./docs/README.md) — the documentation map.
 - [docs/reference/OPENAI-API-REFERENCE.md](./docs/reference/OPENAI-API-REFERENCE.md) — the endpoint, headers and error shapes this server relies on.
 - [docs/testing/TESTING.md](./docs/testing/TESTING.md) — the suites, the runner and the opt-in live tests.
 - [docs/guides/MIGRATION.md](./docs/guides/MIGRATION.md) — renaming from oMLX Prompt Shrink.
+- [docs/guides/RELEASING.md](./docs/guides/RELEASING.md) — version, build and publish steps.
 - [examples/python-client.py](./examples/python-client.py) — a runnable MCP client that lists the tools and calls one.
 - [examples/js-client.js](./examples/js-client.js) — the same client in Node, built on the official MCP JS SDK.
 - [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) — the transport and `MCPServer` API this file is built on.
