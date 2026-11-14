@@ -7,7 +7,7 @@
 #   ./test/test.sh                 # install dev deps, then ruff + pytest
 #   ./test/test.sh --lint          # ruff only, no tests
 #   ./test/test.sh --no-install    # skip `pip install -r requirements-dev.txt`
-#   ./test/test.sh --only test/omlx_prompt_shrink_tests.py::test_trim_leaves_short_lists_untouched
+#   ./test/test.sh --only test/omlx-prompt-shrink-tests.py::test_trim_leaves_short_lists_untouched
 #                                  # run one file or one test (repeatable)
 #   ./test/test.sh --help          # show this help
 #
