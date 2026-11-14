@@ -18,6 +18,8 @@
 Sunucu yalnızca bir **OpenAI uyumlu `/v1/chat/completions` uç noktası** ister —
 yerel model sunucuları, kendi GPU'unuzda çalışan motorlar ve OpenAI ağ geçitleri
 hepsi uyar. `OPENAI_SHRINK_BASE_URL` ve `OPENAI_SHRINK_MODEL` ile yönlendirin.
+Tel protokolü, başlıklar ve hata biçimleri
+[`OPENAI-API-REFERENCE.md`](./OPENAI-API-REFERENCE.md) dosyasında özetlenmiştir.
 
 ### En yaygın olanlar için hızlı yapılandırma
 
@@ -39,6 +41,38 @@ Ollama örneği:
 export OPENAI_SHRINK_BASE_URL="http://127.0.0.1:11434/v1"
 export OPENAI_SHRINK_MODEL="qwen2.5-coder"
 ```
+
+### ☁️ Uzak / bulut OpenAI-uyumlu sağlayıcılar
+
+Yerel tek seçenek değil: büyük sağlayıcıların hepsi OpenAI uyumlu bir
+`/v1/chat/completions` uç noktası sunar. Sunucuyu ona yöneltin ve
+`OPENAI_SHRINK_API_KEY` verin:
+
+| Sağlayıcı | Base URL | Model değeri | Notlar |
+| :--- | :--- | :--- | :--- |
+| OpenAI | `https://api.openai.com/v1` | örn. `gpt-4o-mini` | API anahtarı gerekli |
+| Azure OpenAI | `https://{resource}.openai.azure.com/openai/deployments/{deployment}` | deployment adınız | `Authorization` yerine `api-key` başlığı gerekir — aşağıya bakın |
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` | API anahtarı gerekli |
+| Groq | `https://api.groq.com/openai/v1` | örn. `llama-3.3-70b-versatile` | Çok hızlı, API anahtarı gerekli |
+| Together AI | `https://api.together.xyz/v1` | örn. `meta-llama/Llama-3.3-70B-Instruct-Turbo` | API anahtarı gerekli |
+| Fireworks AI | `https://api.fireworks.ai/inference/v1` | örn. `accounts/fireworks/models/llama-v3p3-70b-instruct` | API anahtarı gerekli |
+| Mistral API | `https://api.mistral.ai/v1` | `mistral-large-latest` | API anahtarı gerekli |
+| OpenRouter | `https://openrouter.ai/api/v1` | model slug'ı | 200+ modele yönlendirir, API anahtarı gerekli |
+| HuggingFace Inference Endpoints | `https://{endpoint'iniz}/v1` | modeliniz | Özel uç nokta, token gerekli |
+| Cloudflare Workers AI | `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1` | örn. `@cf/meta/llama-3.3-70b-instruct-fp8` | Token gerekli |
+
+Azure OpenAI bearer `Authorization` başlığı kullanmaz; gizli anahtarı özel
+başlık olarak geçirin:
+
+```bash
+export OPENAI_SHRINK_BASE_URL="https://myresource.openai.azure.com/openai/deployments/my-deployment"
+export OPENAI_SHRINK_MODEL="my-deployment"
+export OPENAI_SHRINK_EXTRA_HEADERS='{"api-key": "azure-secret"}'
+```
+
+Herhangi bir ağ geçidi için ek statik başlıklar `OPENAI_SHRINK_EXTRA_HEADERS`
+ile JSON nesnesi biçiminde kabul edilir (örneğin org id ya da özel yönlendirme
+başlığı).
 
 ### Tam katalog
 
@@ -251,6 +285,7 @@ diğer adları aynı anlama gelir ve yalnızca eski ad ayarlı değilse geçerli
 | `OMLX_SHRINK_TIMEOUT` / `OPENAI_SHRINK_TIMEOUT` | `180` | Özetleyici istek zaman aşımı, saniye (geçersiz değer 180'e düşer) |
 | `OMLX_SHRINK_TOKENIZER` / `OPENAI_SHRINK_TOKENIZER` | `auto` | Token sayacı: `auto` (kuruluysa tiktoken `cl100k_base`, yoksa heuristic), bir tiktoken encoding adı veya her zaman karakter ÷ 4 için `heuristic`/`off` |
 | `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `32768` | Her araç çağrısı için varsayılan bağlam bütçesi |
+| `OPENAI_SHRINK_EXTRA_HEADERS` | *(boş)* | Azure OpenAI gibi ağ geçitleri için ek HTTP başlıkları, JSON nesnesi biçiminde (`{"api-key": "..."}`) |
 
 ### 6. Kullanın
 
@@ -303,6 +338,7 @@ omlx-prompt-shrink/
 ├── README.tr.md             # Bu dosya (Türkçe)
 ├── CONTRIBUTING.md          # Kurulum, testler, commit kuralları
 ├── CHANGELOG.md             # Keep a Changelog sürüm notları
+├── OPENAI-API-REFERENCE.md  # Uç nokta, başlıklar ve hata biçimleri
 ├── requirements-dev.txt     # Geliştirme bağımlılıkları (mcp, pytest, ruff, tiktoken)
 ├── pytest.ini               # pytest yapılandırması (testpaths, python_files)
 ├── .ruff.toml               # Ruff lint yapılandırması
@@ -346,6 +382,7 @@ python3 omlx-prompt-shrink.py   # stdio sunucusunu başlatır; durdurmak için C
 - [omlx-prompt-shrink.py](./omlx-prompt-shrink.py) — araç şemaları ve davranışın kaynağı.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — geliştirme kurulumu, testler ve commit kuralları.
 - [CHANGELOG.md](./CHANGELOG.md) — sürüm notları.
+- [OPENAI-API-REFERENCE.md](./OPENAI-API-REFERENCE.md) — sunucunun dayandığı uç nokta, başlıklar ve hata biçimleri.
 
 ---
 

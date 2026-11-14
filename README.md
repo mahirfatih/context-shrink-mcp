@@ -18,6 +18,8 @@
 The server only needs an **OpenAI-compatible `/v1/chat/completions` endpoint** —
 local model servers, self-hosted GPU engines and OpenAI gateways all qualify.
 Point it at the endpoint with `OPENAI_SHRINK_BASE_URL` and `OPENAI_SHRINK_MODEL`.
+The wire protocol, headers and error shapes are summarised in
+[`OPENAI-API-REFERENCE.md`](./OPENAI-API-REFERENCE.md).
 
 ### Quick config for the most common ones
 
@@ -39,6 +41,38 @@ Example with Ollama:
 export OPENAI_SHRINK_BASE_URL="http://127.0.0.1:11434/v1"
 export OPENAI_SHRINK_MODEL="qwen2.5-coder"
 ```
+
+### ☁️ Remote / cloud OpenAI-compatible providers
+
+Local is not the only option: every major provider exposes an OpenAI-compatible
+`/v1/chat/completions` endpoint, so point the server at it and set
+`OPENAI_SHRINK_API_KEY`:
+
+| Provider | Base URL | Model value | Notes |
+| :--- | :--- | :--- | :--- |
+| OpenAI | `https://api.openai.com/v1` | e.g. `gpt-4o-mini` | API key required |
+| Azure OpenAI | `https://{resource}.openai.azure.com/openai/deployments/{deployment}` | your deployment name | Needs the `api-key` header instead of `Authorization` — see below |
+| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` | API key required |
+| Groq | `https://api.groq.com/openai/v1` | e.g. `llama-3.3-70b-versatile` | Very fast, API key required |
+| Together AI | `https://api.together.xyz/v1` | e.g. `meta-llama/Llama-3.3-70B-Instruct-Turbo` | API key required |
+| Fireworks AI | `https://api.fireworks.ai/inference/v1` | e.g. `accounts/fireworks/models/llama-v3p3-70b-instruct` | API key required |
+| Mistral API | `https://api.mistral.ai/v1` | `mistral-large-latest` | API key required |
+| OpenRouter | `https://openrouter.ai/api/v1` | any model slug | Routes to 200+ models, API key required |
+| HuggingFace Inference Endpoints | `https://{your-endpoint}/v1` | your model | Private endpoint, token required |
+| Cloudflare Workers AI | `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1` | e.g. `@cf/meta/llama-3.3-70b-instruct-fp8` | Token required |
+
+Azure OpenAI does not use a bearer `Authorization` header; pass its secret as a
+custom header:
+
+```bash
+export OPENAI_SHRINK_BASE_URL="https://myresource.openai.azure.com/openai/deployments/my-deployment"
+export OPENAI_SHRINK_MODEL="my-deployment"
+export OPENAI_SHRINK_EXTRA_HEADERS='{"api-key": "azure-secret"}'
+```
+
+Additional static headers for any gateway are accepted through
+`OPENAI_SHRINK_EXTRA_HEADERS` as a JSON object (for example an org id or a
+custom routing header).
 
 ### Full catalogue
 
@@ -254,6 +288,7 @@ name is unset:
 | `OMLX_SHRINK_TIMEOUT` / `OPENAI_SHRINK_TIMEOUT` | `180` | Summariser request timeout, seconds (invalid values fall back to 180) |
 | `OMLX_SHRINK_TOKENIZER` / `OPENAI_SHRINK_TOKENIZER` | `auto` | Token counter: `auto` (tiktoken `cl100k_base` if installed, else heuristic), a tiktoken encoding name, or `heuristic`/`off` to always use chars ÷ 4 |
 | `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `32768` | Default context budget for every tool call |
+| `OPENAI_SHRINK_EXTRA_HEADERS` | *(empty)* | Extra HTTP headers as a JSON object, for gateways such as Azure OpenAI (`{"api-key": "..."}`) |
 
 ### 6. Use it
 
@@ -307,6 +342,7 @@ omlx-prompt-shrink/
 ├── README.tr.md             # Turkish documentation
 ├── CONTRIBUTING.md          # Setup, tests, commit conventions
 ├── CHANGELOG.md             # Keep a Changelog release notes
+├── OPENAI-API-REFERENCE.md  # Endpoint, headers and error shapes
 ├── requirements-dev.txt     # Dev dependencies (mcp, pytest, ruff, tiktoken)
 ├── pytest.ini               # pytest config (testpaths, python_files)
 ├── .ruff.toml               # Ruff lint configuration
@@ -350,6 +386,7 @@ python3 omlx-prompt-shrink.py   # starts the stdio server; Ctrl-C to stop
 - [omlx-prompt-shrink.py](./omlx-prompt-shrink.py) — source of truth for tool schemas and behaviour.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — development setup, tests, and commit conventions.
 - [CHANGELOG.md](./CHANGELOG.md) — release notes.
+- [OPENAI-API-REFERENCE.md](./OPENAI-API-REFERENCE.md) — the endpoint, headers and error shapes this server relies on.
 
 ---
 
