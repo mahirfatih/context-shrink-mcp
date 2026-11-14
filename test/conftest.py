@@ -1,7 +1,7 @@
 """Shared pytest fixtures.
 
 The server lives in a single file whose name is not a valid Python module
-identifier (``omlx-prompt-shrink.py``), so it is loaded by path. Each test gets a
+identifier (``context-shrink.py``), so it is loaded by path. Each test gets a
 fresh module instance, which also resets the lazily cached tokenizer.
 """
 
@@ -13,11 +13,11 @@ from types import ModuleType
 
 import pytest
 
-MODULE_PATH = Path(__file__).resolve().parents[1] / "omlx-prompt-shrink.py"
+MODULE_PATH = Path(__file__).resolve().parents[1] / "context-shrink.py"
 
 
 def _load_module() -> ModuleType:
-    spec = importlib.util.spec_from_file_location("omlx_prompt_shrink", MODULE_PATH)
+    spec = importlib.util.spec_from_file_location("context_shrink", MODULE_PATH)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -33,4 +33,4 @@ def shrink() -> ModuleType:
 @pytest.fixture(autouse=True)
 def _force_heuristic(monkeypatch: pytest.MonkeyPatch) -> None:
     """Default every test to the deterministic, dependency-free token counter."""
-    monkeypatch.setenv("OMLX_SHRINK_TOKENIZER", "heuristic")
+    monkeypatch.setenv("CONTEXT_SHRINK_TOKENIZER", "heuristic")

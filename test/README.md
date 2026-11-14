@@ -1,6 +1,6 @@
 # Test
 
-Local test runner for oMLX Prompt Shrink. Everything is one command; there is no
+Local test runner for Context Shrink. Everything is one command; there is no
 device matrix and nothing to install beyond the dev dependencies.
 
 Strategy and conventions live in [`CONTRIBUTING.md`](../CONTRIBUTING.md); the
@@ -12,7 +12,7 @@ suite itself is described in the [README](../README.md#-testing--ci).
 | :--- | :--- |
 | [`test.sh`](./test.sh) | Single test runner. Installs dev deps, runs Ruff, then pytest. |
 | [`conftest.py`](./conftest.py) | Shared fixtures. Loads the server module by path and forces the deterministic token counter. |
-| [`omlx-prompt-shrink-tests.py`](./omlx-prompt-shrink-tests.py) | Unit tests for the pure helpers and the tokenizer resolution logic. |
+| [`context-shrink-tests.py`](./context-shrink-tests.py) | Unit tests for the pure helpers and the tokenizer resolution logic. |
 
 ## Quick start
 
@@ -20,7 +20,7 @@ suite itself is described in the [README](../README.md#-testing--ci).
 ./test/test.sh                                   # install deps + ruff + pytest
 ./test/test.sh --lint                            # ruff only
 ./test/test.sh --no-install                      # skip the pip install step
-./test/test.sh --only test/omlx-prompt-shrink-tests.py::test_compact_uses_provided_summary
+./test/test.sh --only test/context-shrink-tests.py::test_compact_uses_provided_summary
 ./test/test.sh --help                            # full flag list
 ```
 

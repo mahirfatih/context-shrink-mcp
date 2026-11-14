@@ -24,7 +24,7 @@ The runner and both checks run in CI (`.github/workflows/ci.yml`). CI is
 
 ## The server
 
-Everything ships in a single file, `omlx-prompt-shrink.py`. Keep it that way:
+Everything ships in a single file, `context-shrink.py`. Keep it that way:
 
 - Standard library only at runtime, except the required `mcp` SDK.
 - `tiktoken` must stay **optional** — import it defensively and fall back to the
@@ -43,15 +43,15 @@ test — mock the tokenizer or the summariser endpoint instead.
 
 File names follow one rule: **scripts and data files are kebab-case**, with the
 Python **test files carrying a `-tests` suffix** (for example
-`omlx-prompt-shrink-tests.py`). A hyphen is not legal in an importable module
+`context-shrink-tests.py`). A hyphen is not legal in an importable module
 name, so `pytest.ini` pins `python_files = *-tests.py`; pytest imports the file
 by path. Names fixed by a tool — `conftest.py`, `pytest.ini` — keep their name.
 
 Run a single file or test while iterating:
 
 ```bash
-./test/test.sh --only test/omlx-prompt-shrink-tests.py
-./test/test.sh --only test/omlx-prompt-shrink-tests.py::test_compact_uses_provided_summary
+./test/test.sh --only test/context-shrink-tests.py
+./test/test.sh --only test/context-shrink-tests.py::test_compact_uses_provided_summary
 ```
 
 ## Commit conventions
@@ -71,7 +71,7 @@ If you run the server from OpenCode, keep the deployed copy in step with the
 repository (for example by copying or symlinking the file):
 
 ```bash
-cp omlx-prompt-shrink.py ~/.config/opencode/mcp/omlx-prompt-shrink.py
+cp context-shrink.py ~/.config/opencode/mcp/context-shrink.py
 ```
 
 OpenCode reloads MCP servers when configuration changes; run `/reload` in the TUI

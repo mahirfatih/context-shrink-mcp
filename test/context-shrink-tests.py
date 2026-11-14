@@ -1,4 +1,4 @@
-"""Unit tests for the oMLX Prompt Shrink MCP server.
+"""Unit tests for the Context Shrink MCP server.
 
 These cover the pure helpers (token estimation, trimming, compaction splitting,
 chunking) and the optional-tokenizer resolution logic. No network access and no
@@ -174,7 +174,7 @@ class _BrokenTiktoken:
 def test_tokenizer_falls_back_when_tiktoken_missing(
     shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("OMLX_SHRINK_TOKENIZER", "auto")
+    monkeypatch.setenv("CONTEXT_SHRINK_TOKENIZER", "auto")
     monkeypatch.setattr(shrink, "tiktoken", None)
     monkeypatch.setattr(shrink, "_tokenizer_cache", None)
     encode, label = shrink._resolve_tokenizer()
@@ -186,7 +186,7 @@ def test_tokenizer_uses_tiktoken_when_available(
     shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake = _FakeTiktoken()
-    monkeypatch.setenv("OMLX_SHRINK_TOKENIZER", "auto")
+    monkeypatch.setenv("CONTEXT_SHRINK_TOKENIZER", "auto")
     monkeypatch.setattr(shrink, "tiktoken", fake)
     monkeypatch.setattr(shrink, "_tokenizer_cache", None)
     encode, label = shrink._resolve_tokenizer()
@@ -199,7 +199,7 @@ def test_tokenizer_honours_explicit_encoding(
     shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     fake = _FakeTiktoken()
-    monkeypatch.setenv("OMLX_SHRINK_TOKENIZER", "o200k_base")
+    monkeypatch.setenv("CONTEXT_SHRINK_TOKENIZER", "o200k_base")
     monkeypatch.setattr(shrink, "tiktoken", fake)
     monkeypatch.setattr(shrink, "_tokenizer_cache", None)
     _, label = shrink._resolve_tokenizer()
@@ -210,7 +210,7 @@ def test_tokenizer_honours_explicit_encoding(
 def test_tokenizer_falls_back_on_unknown_encoding(
     shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("OMLX_SHRINK_TOKENIZER", "does-not-exist")
+    monkeypatch.setenv("CONTEXT_SHRINK_TOKENIZER", "does-not-exist")
     monkeypatch.setattr(shrink, "tiktoken", _BrokenTiktoken())
     monkeypatch.setattr(shrink, "_tokenizer_cache", None)
     encode, label = shrink._resolve_tokenizer()
@@ -221,7 +221,7 @@ def test_tokenizer_falls_back_on_unknown_encoding(
 def test_tokenizer_disabled_by_heuristic_setting(
     shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("OMLX_SHRINK_TOKENIZER", "off")
+    monkeypatch.setenv("CONTEXT_SHRINK_TOKENIZER", "off")
     monkeypatch.setattr(shrink, "tiktoken", _FakeTiktoken())
     monkeypatch.setattr(shrink, "_tokenizer_cache", None)
     encode, label = shrink._resolve_tokenizer()
@@ -277,6 +277,48 @@ def test_legacy_name_wins_over_generic_alias(
     )
 
 
+def test_context_shrink_name_wins_over_legacy_and_generic(
+    shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CONTEXT_SHRINK_MODEL", "canonical-model")
+    monkeypatch.setenv("OMLX_SHRINK_MODEL", "legacy-model")
+    monkeypatch.setenv("OPENAI_SHRINK_MODEL", "generic-model")
+    assert (
+        shrink._env_value(
+            "CONTEXT_SHRINK_MODEL",
+            "OMLX_SHRINK_MODEL",
+            "OPENAI_SHRINK_MODEL",
+            default="",
+        )
+        == "canonical-model"
+    )
+
+
+def test_context_shrink_falls_back_to_legacy_then_generic(
+    shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("CONTEXT_SHRINK_MODEL", raising=False)
+    monkeypatch.setenv("OMLX_SHRINK_MODEL", "legacy-model")
+    monkeypatch.setenv("OPENAI_SHRINK_MODEL", "generic-model")
+    names = ("CONTEXT_SHRINK_MODEL", "OMLX_SHRINK_MODEL", "OPENAI_SHRINK_MODEL")
+    assert shrink._env_value(*names, default="") == "legacy-model"
+    monkeypatch.delenv("OMLX_SHRINK_MODEL", raising=False)
+    assert shrink._env_value(*names, default="") == "generic-model"
+
+
+def test_extra_headers_context_name_wins_over_aliases(
+    shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CONTEXT_SHRINK_EXTRA_HEADERS", '{"x-canonical": "1"}')
+    monkeypatch.setenv("OMLX_SHRINK_EXTRA_HEADERS", '{"x-legacy": "2"}')
+    monkeypatch.setenv("OPENAI_SHRINK_EXTRA_HEADERS", '{"x-generic": "3"}')
+    assert shrink._extra_headers() == {"x-canonical": "1"}
+    monkeypatch.delenv("CONTEXT_SHRINK_EXTRA_HEADERS", raising=False)
+    assert shrink._extra_headers() == {"x-legacy": "2"}
+    monkeypatch.delenv("OMLX_SHRINK_EXTRA_HEADERS", raising=False)
+    assert shrink._extra_headers() == {"x-generic": "3"}
+
+
 # --- _chat_completions_url --------------------------------------------------
 @pytest.mark.parametrize(
     ("base_url", "expected"),
@@ -297,6 +339,7 @@ def test_chat_completions_url_normalizes_base_url(
 def test_tokenizer_honours_generic_alias(
     shrink: ModuleType, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.delenv("CONTEXT_SHRINK_TOKENIZER", raising=False)
     monkeypatch.delenv("OMLX_SHRINK_TOKENIZER", raising=False)
     monkeypatch.setenv("OPENAI_SHRINK_TOKENIZER", "heuristic")
     monkeypatch.setattr(shrink, "tiktoken", _FakeTiktoken())
@@ -355,3 +398,8 @@ def test_call_chat_completions_sends_extra_headers(
     headers = captured["headers"]
     assert headers.get("Api-key") == "secret"
     assert headers.get("Authorization") == "Bearer tok"
+
+
+# --- server identity ---------------------------------------------------------
+def test_server_display_name_is_context_shrink(shrink: ModuleType) -> None:
+    assert shrink.server.name == "Context Shrink"

@@ -14,9 +14,9 @@ The server is deliberately dependency-light: the MCP SDK plus the standard
 library. ``compact_context`` can summarise with the model at
 ``base_url``/``model``, or accept a summary you already produced.
 
-Configuration comes from environment variables. Both the ``OMLX_SHRINK_*``
-names (kept for backwards compatibility) and the vendor-neutral
-``OPENAI_SHRINK_*`` aliases are accepted:
+Configuration comes from environment variables. The canonical ``CONTEXT_SHRINK_*``
+names are accepted first, then the legacy ``OMLX_SHRINK_*`` ones, then the
+``OPENAI_SHRINK_*`` aliases:
 
 * ``*_BASE_URL``      - chat-completions endpoint (default
   ``http://127.0.0.1:8000/v1``)
@@ -26,8 +26,8 @@ names (kept for backwards compatibility) and the vendor-neutral
 * ``*_TOKENIZER``     - ``auto`` (default), a tiktoken encoding name, or
   ``heuristic``/``off``/``none``/``chars``
 * ``*_MAX_CONTEXT_TOKENS`` - default context budget (default 32768)
-* ``OPENAI_SHRINK_EXTRA_HEADERS`` - extra HTTP headers as a JSON object, for
-  gateways that need them (Azure OpenAI's ``api-key`` header, org ids, ...)
+* ``*_EXTRA_HEADERS`` - extra HTTP headers as a JSON object, for gateways that
+  need them (Azure OpenAI's ``api-key`` header, org ids, ...)
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ from typing import Any, NoReturn
 
 def _fail(message: str) -> NoReturn:
     """Write a plain, actionable message to stderr and exit non-zero."""
-    sys.stderr.write(f"omlx-prompt-shrink: {message}\n")
+    sys.stderr.write(f"context-shrink: {message}\n")
     raise SystemExit(1)
 
 
@@ -80,7 +80,7 @@ try:  # optional: a real tokenizer is used when available, otherwise a heuristic
 except Exception:  # pragma: no cover - optional dependency
     tiktoken = None
 
-logger = logging.getLogger("omlx-prompt-shrink")
+logger = logging.getLogger("context-shrink")
 logger.addHandler(logging.StreamHandler(sys.stderr))
 logger.setLevel(logging.INFO)
 
@@ -123,38 +123,61 @@ def _env_int(*names: str, default: int) -> int:
 def _extra_headers() -> dict[str, str]:
     """Optional extra HTTP headers as a JSON object (for gateways such as Azure).
 
+    Read from the first non-empty of ``CONTEXT_SHRINK_EXTRA_HEADERS``,
+    ``OMLX_SHRINK_EXTRA_HEADERS`` or ``OPENAI_SHRINK_EXTRA_HEADERS``.
+
     Example::
 
-        OPENAI_SHRINK_EXTRA_HEADERS='{"api-key": "azure-secret"}'
+        CONTEXT_SHRINK_EXTRA_HEADERS='{"api-key": "azure-secret"}'
     """
-    raw = os.environ.get("OPENAI_SHRINK_EXTRA_HEADERS", "").strip()
+    raw = _env_value(
+        "CONTEXT_SHRINK_EXTRA_HEADERS",
+        "OMLX_SHRINK_EXTRA_HEADERS",
+        "OPENAI_SHRINK_EXTRA_HEADERS",
+        default="",
+    )
     if not raw:
         return {}
     try:
         parsed = json.loads(raw)
     except ValueError:
-        logger.warning("OPENAI_SHRINK_EXTRA_HEADERS is not valid JSON; ignoring it")
+        logger.warning("*_EXTRA_HEADERS is not valid JSON; ignoring it")
         return {}
     if not isinstance(parsed, dict):
-        logger.warning("OPENAI_SHRINK_EXTRA_HEADERS must be a JSON object; ignoring it")
+        logger.warning("*_EXTRA_HEADERS must be a JSON object; ignoring it")
         return {}
     return {str(key): str(value) for key, value in parsed.items()}
 
 
-# The legacy OMLX_SHRINK_* names win when both are set; the OPENAI_SHRINK_*
-# aliases make the server vendor-neutral for new deployments.
+# Canonical names are CONTEXT_SHRINK_*; the legacy OMLX_SHRINK_* names and the
+# vendor-neutral OPENAI_SHRINK_* aliases are still accepted, in that order.
 DEFAULT_BASE_URL = _env_value(
+    "CONTEXT_SHRINK_BASE_URL",
     "OMLX_SHRINK_BASE_URL",
     "OPENAI_SHRINK_BASE_URL",
     default="http://127.0.0.1:8000/v1",
 )
-DEFAULT_API_KEY = _env_value("OMLX_SHRINK_API_KEY", "OPENAI_SHRINK_API_KEY", default="")
-DEFAULT_MODEL = _env_value("OMLX_SHRINK_MODEL", "OPENAI_SHRINK_MODEL", default="")
+DEFAULT_API_KEY = _env_value(
+    "CONTEXT_SHRINK_API_KEY",
+    "OMLX_SHRINK_API_KEY",
+    "OPENAI_SHRINK_API_KEY",
+    default="",
+)
+DEFAULT_MODEL = _env_value(
+    "CONTEXT_SHRINK_MODEL",
+    "OMLX_SHRINK_MODEL",
+    "OPENAI_SHRINK_MODEL",
+    default="",
+)
 SUMMARY_TIMEOUT_SECONDS = _env_float(
-    "OMLX_SHRINK_TIMEOUT", "OPENAI_SHRINK_TIMEOUT", default=180.0
+    "CONTEXT_SHRINK_TIMEOUT",
+    "OMLX_SHRINK_TIMEOUT",
+    "OPENAI_SHRINK_TIMEOUT",
+    default=180.0,
 )
 
 MAX_CONTEXT_TOKENS = _env_int(
+    "CONTEXT_SHRINK_MAX_CONTEXT_TOKENS",
     "OMLX_SHRINK_MAX_CONTEXT_TOKENS",
     "OPENAI_SHRINK_MAX_CONTEXT_TOKENS",
     default=32768,
@@ -179,8 +202,8 @@ _tokenizer_cache: tuple[Any, str] | None = None
 def _resolve_tokenizer() -> tuple[Any, str]:
     """Return ``(encode_callable_or_None, label)``, resolved once and cached.
 
-    ``OMLX_SHRINK_TOKENIZER`` (alias: ``OPENAI_SHRINK_TOKENIZER``) controls the
-    choice:
+    ``CONTEXT_SHRINK_TOKENIZER`` (aliases: ``OMLX_SHRINK_TOKENIZER``,
+    ``OPENAI_SHRINK_TOKENIZER``) controls the choice:
 
     * ``auto`` (default) - use ``tiktoken``'s ``cl100k_base`` when installed;
       otherwise fall back to the character heuristic.
@@ -192,7 +215,10 @@ def _resolve_tokenizer() -> tuple[Any, str]:
         return _tokenizer_cache
 
     setting = _env_value(
-        "OMLX_SHRINK_TOKENIZER", "OPENAI_SHRINK_TOKENIZER", default="auto"
+        "CONTEXT_SHRINK_TOKENIZER",
+        "OMLX_SHRINK_TOKENIZER",
+        "OPENAI_SHRINK_TOKENIZER",
+        default="auto",
     ).lower()
     fallback: tuple[Any, str] = (None, _HEURISTIC_LABEL)
     if setting in {"heuristic", "off", "none", "chars", ""}:
@@ -201,7 +227,7 @@ def _resolve_tokenizer() -> tuple[Any, str]:
     if tiktoken is None:
         if setting != "auto":
             logger.warning(
-                "OPENAI_SHRINK_TOKENIZER=%r requested but tiktoken is not installed; "
+                "*_TOKENIZER=%r requested but tiktoken is not installed; "
                 "using %s",
                 setting,
                 _HEURISTIC_LABEL,
@@ -221,7 +247,7 @@ def _resolve_tokenizer() -> tuple[Any, str]:
     return _tokenizer_cache
 
 
-server = MCPServer("oMLX Prompt Shrink")
+server = MCPServer("Context Shrink")
 
 
 def _content_to_text(content: Any) -> str:
@@ -477,7 +503,7 @@ def compact_context(
     """Replace the oldest messages with a summary instead of dropping them.
 
     The summary comes from ``summary`` when given, otherwise from the local model
-    via ``model``/``base_url`` (or the OMLX_SHRINK_MODEL / OMLX_SHRINK_BASE_URL
+    via ``model``/``base_url`` (or the CONTEXT_SHRINK_MODEL / CONTEXT_SHRINK_BASE_URL
     environment variables). With neither, the tool returns a ``needs_summary``
     plan plus the exact prompt, and no message content is echoed back.
     """
