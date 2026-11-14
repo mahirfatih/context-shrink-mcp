@@ -15,8 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   default), with a character-based heuristic fallback, controlled by
   `CONTEXT_SHRINK_TOKENIZER`.
 - `pytest` unit tests for the pure helpers and the tokenizer resolution logic.
-- `test/` folder with a single runner, `test/test.sh` (Ruff + pytest), and
-  kebab-case test file names.
+- `test/` folder with a single runner, `test/test.sh` (Ruff + pytest), symmetric
+  `test/py/` and `test/js/` suites, and kebab-case test file names.
 - GitHub Actions CI workflow (Ruff, `py_compile`, `pytest`), **manual dispatch
   only**.
 - Turkish README (`README.tr.md`) and a language switcher between both READMEs.
@@ -29,8 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   as Azure OpenAI, whose `api-key` header replaces the bearer token.
 - Remote/cloud OpenAI-compatible providers, documented with per-provider base
   URLs in both READMEs.
-- `OPENAI-API-REFERENCE.md`: the endpoint, request/response fields, headers and
-  error shapes the server relies on.
+- `docs/reference/OPENAI-API-REFERENCE.md`: the endpoint, request/response
+  fields, headers and error shapes the server relies on.
 - Startup hardening: clear messages on missing/outdated `mcp` and Python < 3.10,
   UTF-8 stdio on Windows, tolerant parsing of invalid timeout values, clean exit
   on Ctrl-C / closed pipe.
@@ -39,15 +39,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Input hardening: out-of-range `max_context_tokens` is clamped to `1…1000000`,
   `keep_last`/`summary_budget_tokens` to `>= 1`, `threshold` to `0…1`, and a
   base URL that is not `http(s)` is logged as a warning.
-- End-to-end test over the real STDIO transport (`test/context-shrink-mcp-tests.py`):
-  handshake, `tools/list` and one `tools/call`.
+- End-to-end test over the real STDIO transport
+  (`test/py/context-shrink-mcp-tests.py`): handshake, `tools/list` and one
+  `tools/call`.
 - `requirements.txt` pins the single runtime dependency (`mcp>=2.0,<3.0`); the
   same bound is applied in `requirements-dev.txt`.
 - Optional `.pre-commit-config.yaml` (Ruff + basic hygiene hooks).
-- Opt-in live integration tests (`test/context-shrink-live-tests.py`) that drive a
-  real `compact_context` round-trip against a local OpenAI-compatible endpoint;
-  they skip unless `CONTEXT_SHRINK_LIVE=1` and the endpoint answers, and read the
-  API key from the environment rather than the repo.
+- Opt-in live integration tests (`test/py/context-shrink-live-tests.py`) that
+  drive a real `compact_context` round-trip against a local OpenAI-compatible
+  endpoint; they skip unless `CONTEXT_SHRINK_LIVE=1` and the endpoint answers,
+  and read the API key from the environment rather than the repo.
 - Node integration tests (`test/js/`) built on the official MCP JS SDK, covering
   `tools/list` and `estimate_context` offline plus an opt-in live model test.
 - `examples/js-client.js`, the Node port of `examples/python-client.py`.
@@ -69,8 +70,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   three `compact_context` modes.
 - Documented the full tool parameter surface (including `threshold`,
   `summary_budget_tokens` and `summary_role`).
-- Added a migration guide to both READMEs for the rename (file path, tool
-  namespace, repository and environment variables).
+- Added a migration guide (`docs/guides/MIGRATION.md`) for the rename (file
+  path, tool namespace, repository and environment variables), linked from both
+  READMEs.
+- Added a `docs/` tree with a [`docs/README.md`](./docs/README.md) map, plus
+  `docs/reference/OPENAI-API-REFERENCE.md`, `docs/testing/TESTING.md` and
+  `docs/guides/MIGRATION.md`.
 - Added a "Common pitfalls" list, the `CONTEXT_SHRINK_LOG_LEVEL` variable and a
   link to the MCP Python SDK to both READMEs.
 - Added `examples/python-client.py`, a runnable MCP client (list tools + call

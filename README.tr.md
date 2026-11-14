@@ -28,7 +28,7 @@ Sunucu yalnızca bir **OpenAI uyumlu `/v1/chat/completions` uç noktası** ister
 yerel model sunucuları, kendi GPU'unuzda çalışan motorlar ve OpenAI ağ geçitleri
 hepsi uyar. `CONTEXT_SHRINK_BASE_URL` ve `CONTEXT_SHRINK_MODEL` ile yönlendirin.
 Tel protokolü, başlıklar ve hata biçimleri
-[`OPENAI-API-REFERENCE.md`](./OPENAI-API-REFERENCE.md) dosyasında özetlenmiştir.
+[`docs/reference/OPENAI-API-REFERENCE.md`](./docs/reference/OPENAI-API-REFERENCE.md) dosyasında özetlenmiştir.
 
 ### En yaygın olanlar için hızlı yapılandırma
 
@@ -494,23 +494,28 @@ Node 18+ ve bir kez `npm install` gerektirir.
 ```
 context-shrink-mcp/
 ├── context-shrink.py        # Tek dosyalık MCP sunucusu (ürünün tamamı)
-├── README.md                # İngilizce dokümantasyon
-├── README.tr.md             # Bu dosya (Türkçe)
+├── README.md                # İngilizce hızlı tur
+├── README.tr.md             # Türkçe hızlı tur
 ├── CONTRIBUTING.md          # Kurulum, testler, commit kuralları
 ├── CHANGELOG.md             # Keep a Changelog sürüm notları
-├── OPENAI-API-REFERENCE.md  # Uç nokta, başlıklar ve hata biçimleri
+├── docs/                    # Dokümantasyon ağacı (bkz. docs/README.md)
+│   ├── README.md            # Doküman haritası
+│   ├── guides/MIGRATION.md  # Yeniden adlandırma / geçiş notları
+│   ├── reference/OPENAI-API-REFERENCE.md  # Uç nokta, başlıklar, hatalar
+│   └── testing/TESTING.md   # Paketler, runner, canlı testler
 ├── requirements.txt         # Çalışma zamanı bağımlılığı (mcp)
 ├── requirements-dev.txt     # Geliştirme bağımlılıkları (mcp, pytest, ruff, tiktoken)
 ├── pytest.ini               # pytest yapılandırması (testpaths, python_files)
 ├── .ruff.toml               # Ruff lint yapılandırması
 ├── .pre-commit-config.yaml  # Opsiyonel yerel git hook'ları
 ├── .github/workflows/ci.yml # CI: lint + derleme + testler
-├── test/                    # Test runner + pytest testleri
+├── test/                    # Test runner + paketler
 │   ├── test.sh              # Tek test runner (ruff + pytest)
 │   ├── README.md            # Test klasörü kılavuzu
-│   ├── context-shrink-tests.py # Saf yardımcılar + tokenizer çözümleme + fixture'lar
-│   ├── context-shrink-mcp-tests.py # STDIO uçtan uca tur
-│   ├── context-shrink-live-tests.py # Canlı oMLX entegrasyonu (opt-in)
+│   ├── py/                  # Python paketleri
+│   │   ├── context-shrink-tests.py       # Yardımcılar, tokenizer, fixture'lar
+│   │   ├── context-shrink-mcp-tests.py   # STDIO uçtan uca tur
+│   │   └── context-shrink-live-tests.py  # Canlı oMLX entegrasyonu (opt-in)
 │   └── js/                  # Node entegrasyon testleri (MCP JS SDK)
 ├── examples/                # Çalıştırılabilir örnekler
 │   ├── python-client.py     # Minimal MCP istemcisi: araçları listele + birini çağır
@@ -527,12 +532,13 @@ context-shrink-mcp/
 ./test/test.sh              # dev bağımlılıkları kur, sonra ruff + pytest
 ./test/test.sh --lint       # yalnızca ruff
 ./test/test.sh --no-install # pip install adımını atla
-./test/test.sh --only test/context-shrink-tests.py::test_compact_uses_provided_summary
+./test/test.sh --only test/py/context-shrink-tests.py::test_compact_uses_provided_summary
 ```
 
 - **Runner:** [`test/test.sh`](./test/test.sh) geliştirme bağımlılıklarını kurar, Ruff ve ardından pytest çalıştırır. Yorumlayıcı, varsa proje `.venv`'i, yoksa `python3`'tür.
-- **Paketler:** [`test/context-shrink-tests.py`](./test/context-shrink-tests.py) saf yardımcıları (token tahmini, kırpma, sıkıştırma bölme ve parçalama), tokenizer çözümleme mantığını ve ortam değişkeni ayrıştırmayı kapsar — ağ yok. [`test/context-shrink-mcp-tests.py`](./test/context-shrink-mcp-tests.py) ise gerçek STDIO taşıması üzerinden uçtan uca bir tur ekler (el sıkışma → `tools/list` → `tools/call`).
-- **Canlı testler (opt-in):** [`test/context-shrink-live-tests.py`](./test/context-shrink-live-tests.py) ve [`test/js/`](./test/js) içindeki Node paketi gerçek bir uç noktaya bağlanır. `CONTEXT_SHRINK_LIVE=1` ayarlanmadıkça ve uç nokta yanıt vermedikçe atlanır; böylece varsayılan çalıştırma çevrimdışı kalır. API anahtarı `CONTEXT_SHRINK_API_KEY` ortam değişkeninden okunur, repoya asla yazılmaz.
+- **Paketler:** [`test/py/context-shrink-tests.py`](./test/py/context-shrink-tests.py) saf yardımcıları (token tahmini, kırpma, sıkıştırma bölme ve parçalama), tokenizer çözümleme mantığını ve ortam değişkeni ayrıştırmayı kapsar — ağ yok. [`test/py/context-shrink-mcp-tests.py`](./test/py/context-shrink-mcp-tests.py) ise gerçek STDIO taşıması üzerinden uçtan uca bir tur ekler (el sıkışma → `tools/list` → `tools/call`).
+- **Canlı testler (opt-in):** [`test/py/context-shrink-live-tests.py`](./test/py/context-shrink-live-tests.py) ve [`test/js/`](./test/js) içindeki Node paketi gerçek bir uç noktaya bağlanır. `CONTEXT_SHRINK_LIVE=1` ayarlanmadıkça ve uç nokta yanıt vermedikçe atlanır; böylece varsayılan çalıştırma çevrimdışı kalır. API anahtarı `CONTEXT_SHRINK_API_KEY` ortam değişkeninden okunur, repoya asla yazılmaz.
+- **Ayrıntılar:** [`docs/testing/TESTING.md`](./docs/testing/TESTING.md) tam paket haritasını, bayrakları ve canlı test kurulumunu içerir.
 - **Node testleri:** `cd test/js && npm install && npm test` protokol testlerini resmi MCP JS SDK üzerinden çalıştırır; model testi aynı `CONTEXT_SHRINK_LIVE` bayrağına bağlıdır.
 - **CI:** [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) Ruff, bir `py_compile` kontrolü ve `pytest` çalıştırır. **Yalnızca manuel** tetiklenir — Actions sekmesi → CI → Run workflow.
 
@@ -551,7 +557,10 @@ python3 context-shrink.py   # stdio sunucusunu başlatır; durdurmak için Ctrl-
 - [context-shrink.py](./context-shrink.py) — araç şemaları ve davranışın kaynağı.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — geliştirme kurulumu, testler ve commit kuralları.
 - [CHANGELOG.md](./CHANGELOG.md) — sürüm notları.
-- [OPENAI-API-REFERENCE.md](./OPENAI-API-REFERENCE.md) — sunucunun dayandığı uç nokta, başlıklar ve hata biçimleri.
+- [docs/README.md](./docs/README.md) — dokümantasyon haritası.
+- [docs/reference/OPENAI-API-REFERENCE.md](./docs/reference/OPENAI-API-REFERENCE.md) — sunucunun dayandığı uç nokta, başlıklar ve hata biçimleri.
+- [docs/testing/TESTING.md](./docs/testing/TESTING.md) — paketler, runner ve opt-in canlı testler.
+- [docs/guides/MIGRATION.md](./docs/guides/MIGRATION.md) — oMLX Prompt Shrink'tan geçiş.
 - [examples/python-client.py](./examples/python-client.py) — araçları listeleyip birini çağıran çalıştırılabilir bir MCP istemcisi.
 - [examples/js-client.js](./examples/js-client.js) — aynı istemcinin resmi MCP JS SDK ile yazılmış Node sürümü.
 - [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) — bu dosyanın üzerine kurulduğu taşıma katmanı ve `MCPServer` API'si.
@@ -570,22 +579,9 @@ python3 context-shrink.py   # stdio sunucusunu başlatır; durdurmak için Ctrl-
 ## 🔁 oMLX Prompt Shrink'tan geçiş
 
 Proje, **oMLX Prompt Shrink** adından tedarikçi-tarafsız **Context Shrink** adına
-taşındı. MCP araç *adları* değişmedi (`estimate_context`, `trim_context`,
-`compact_context`) ve GitHub eski URL'i yönlendirir; yani yalnızca birkaç şeye
-dikkat etmek yeterli:
-
-| Ne | Eski | Yeni |
-| :--- | :--- | :--- |
-| Sunucu dosyası | `omlx-prompt-shrink.py` | `context-shrink.py` |
-| `mcp.json` / `opencode.jsonc` komut yolu | `…/omlx-prompt-shrink.py` | `…/context-shrink.py` |
-| Araç namespace'i | `tools.oMLX_Prompt_Shrink.*` | `tools.Context_Shrink.*` |
-| Depo | `omlx-prompt-shrink` | `context-shrink-mcp` |
-| Ortam değişkenleri | `OMLX_SHRINK_*` / `OPENAI_SHRINK_*` | `CONTEXT_SHRINK_*` (eski adlar da çalışır) |
-
-Çektikten sonra yerel yapılandırmanızı `context-shrink.py`'ye yöneltin (ve
-kopyaladığınız bir sürüm varsa onu da güncelleyin), ardından `/reload` çalıştırın.
-Mevcut `OMLX_SHRINK_*` / `OPENAI_SHRINK_*` ortam ayarları çalışmaya devam eder;
-onlar için yapılandırma değişikliği zorunlu değildir.
+taşındı; araç adları değişmedi ve eski depo URL'i yönlendirir. Dosya yolu, araç
+ad alanı, depo ve ortam değişkeni eşlemesi
+[`docs/guides/MIGRATION.md`](./docs/guides/MIGRATION.md) dosyasında.
 
 ---
 

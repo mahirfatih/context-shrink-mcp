@@ -28,7 +28,7 @@ The server only needs an **OpenAI-compatible `/v1/chat/completions` endpoint** �
 local model servers, self-hosted GPU engines and OpenAI gateways all qualify.
 Point it at the endpoint with `CONTEXT_SHRINK_BASE_URL` and `CONTEXT_SHRINK_MODEL`.
 The wire protocol, headers and error shapes are summarised in
-[`OPENAI-API-REFERENCE.md`](./OPENAI-API-REFERENCE.md).
+[`docs/reference/OPENAI-API-REFERENCE.md`](./docs/reference/OPENAI-API-REFERENCE.md).
 
 ### Quick config for the most common ones
 
@@ -497,23 +497,28 @@ Node client needs Node 18+ and `npm install` once.
 ```
 context-shrink-mcp/
 ├── context-shrink.py        # Single-file MCP server (the whole product)
-├── README.md                # English documentation
-├── README.tr.md             # Turkish documentation
+├── README.md                # English quick tour
+├── README.tr.md             # Turkish quick tour
 ├── CONTRIBUTING.md          # Setup, tests, commit conventions
 ├── CHANGELOG.md             # Keep a Changelog release notes
-├── OPENAI-API-REFERENCE.md  # Endpoint, headers and error shapes
+├── docs/                    # Documentation tree (see docs/README.md)
+│   ├── README.md            # Doc map
+│   ├── guides/MIGRATION.md  # Rename / migration notes
+│   ├── reference/OPENAI-API-REFERENCE.md  # Endpoint, headers, errors
+│   └── testing/TESTING.md   # Suites, runner, live tests
 ├── requirements.txt         # Runtime dependency (mcp)
 ├── requirements-dev.txt     # Dev dependencies (mcp, pytest, ruff, tiktoken)
 ├── pytest.ini               # pytest config (testpaths, python_files)
 ├── .ruff.toml               # Ruff lint configuration
 ├── .pre-commit-config.yaml  # Optional local git hooks
 ├── .github/workflows/ci.yml # CI: lint + compile + tests
-├── test/                    # Test runner + pytest tests
+├── test/                    # Test runner + suites
 │   ├── test.sh              # Single test runner (ruff + pytest)
 │   ├── README.md            # Test folder guide
-│   ├── context-shrink-tests.py # Pure helpers + tokenizer resolution + fixtures
-│   ├── context-shrink-mcp-tests.py # STDIO end-to-end round-trip
-│   ├── context-shrink-live-tests.py # Live oMLX integration (opt-in)
+│   ├── py/                  # Python suites
+│   │   ├── context-shrink-tests.py       # Helpers, tokenizer, fixtures
+│   │   ├── context-shrink-mcp-tests.py   # STDIO end-to-end round-trip
+│   │   └── context-shrink-live-tests.py  # Live oMLX integration (opt-in)
 │   └── js/                  # Node integration tests (MCP JS SDK)
 ├── examples/                # Runnable examples
 │   ├── python-client.py     # Minimal MCP client: list tools + call one
@@ -530,12 +535,13 @@ context-shrink-mcp/
 ./test/test.sh              # install dev deps, then ruff + pytest
 ./test/test.sh --lint       # ruff only
 ./test/test.sh --no-install # skip the pip install step
-./test/test.sh --only test/context-shrink-tests.py::test_compact_uses_provided_summary
+./test/test.sh --only test/py/context-shrink-tests.py::test_compact_uses_provided_summary
 ```
 
 - **Runner:** [`test/test.sh`](./test/test.sh) installs the dev dependencies, runs Ruff, then pytest. The interpreter is the project `.venv` when present, otherwise `python3`.
-- **Suites:** [`test/context-shrink-tests.py`](./test/context-shrink-tests.py) covers the pure helpers (token estimation, trimming, compaction splitting and chunking), the tokenizer resolution logic and the env-var parsing — no network. [`test/context-shrink-mcp-tests.py`](./test/context-shrink-mcp-tests.py) adds an end-to-end round-trip over the real STDIO transport (handshake → `tools/list` → `tools/call`).
-- **Live tests (opt-in):** [`test/context-shrink-live-tests.py`](./test/context-shrink-live-tests.py) and the Node suite in [`test/js/`](./test/js) hit a real endpoint. They are skipped unless `CONTEXT_SHRINK_LIVE=1` is set and the endpoint answers, so the default run stays offline. The API key is read from `CONTEXT_SHRINK_API_KEY`, never stored in the repo.
+- **Suites:** [`test/py/context-shrink-tests.py`](./test/py/context-shrink-tests.py) covers the pure helpers (token estimation, trimming, compaction splitting and chunking), the tokenizer resolution logic and the env-var parsing — no network. [`test/py/context-shrink-mcp-tests.py`](./test/py/context-shrink-mcp-tests.py) adds an end-to-end round-trip over the real STDIO transport (handshake → `tools/list` → `tools/call`).
+- **Live tests (opt-in):** [`test/py/context-shrink-live-tests.py`](./test/py/context-shrink-live-tests.py) and the Node suite in [`test/js/`](./test/js) hit a real endpoint. They are skipped unless `CONTEXT_SHRINK_LIVE=1` is set and the endpoint answers, so the default run stays offline. The API key is read from `CONTEXT_SHRINK_API_KEY`, never stored in the repo.
+- **Details:** [`docs/testing/TESTING.md`](./docs/testing/TESTING.md) has the full suite map, flags and live-test setup.
 - **Node tests:** `cd test/js && npm install && npm test` runs the protocol tests through the official MCP JS SDK; the model test is gated by the same `CONTEXT_SHRINK_LIVE` flag.
 - **CI:** [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs Ruff, a `py_compile` check, and `pytest`. It is **manual only** — trigger it with `workflow_dispatch` (Actions tab → CI → Run workflow).
 
@@ -554,7 +560,10 @@ python3 context-shrink.py   # starts the stdio server; Ctrl-C to stop
 - [context-shrink.py](./context-shrink.py) — source of truth for tool schemas and behaviour.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — development setup, tests, and commit conventions.
 - [CHANGELOG.md](./CHANGELOG.md) — release notes.
-- [OPENAI-API-REFERENCE.md](./OPENAI-API-REFERENCE.md) — the endpoint, headers and error shapes this server relies on.
+- [docs/README.md](./docs/README.md) — the documentation map.
+- [docs/reference/OPENAI-API-REFERENCE.md](./docs/reference/OPENAI-API-REFERENCE.md) — the endpoint, headers and error shapes this server relies on.
+- [docs/testing/TESTING.md](./docs/testing/TESTING.md) — the suites, the runner and the opt-in live tests.
+- [docs/guides/MIGRATION.md](./docs/guides/MIGRATION.md) — renaming from oMLX Prompt Shrink.
 - [examples/python-client.py](./examples/python-client.py) — a runnable MCP client that lists the tools and calls one.
 - [examples/js-client.js](./examples/js-client.js) — the same client in Node, built on the official MCP JS SDK.
 - [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) — the transport and `MCPServer` API this file is built on.
@@ -573,22 +582,9 @@ python3 context-shrink.py   # starts the stdio server; Ctrl-C to stop
 ## 🔁 Migrating from oMLX Prompt Shrink
 
 The project was renamed from **oMLX Prompt Shrink** to the vendor-neutral
-**Context Shrink**. The MCP tool *names* are unchanged (`estimate_context`,
-`trim_context`, `compact_context`) and the GitHub repo redirects the old URL, so
-only a few things need attention:
-
-| What | Before | After |
-| :--- | :--- | :--- |
-| Server file | `omlx-prompt-shrink.py` | `context-shrink.py` |
-| `mcp.json` / `opencode.jsonc` command path | `…/omlx-prompt-shrink.py` | `…/context-shrink.py` |
-| Tool namespace | `tools.oMLX_Prompt_Shrink.*` | `tools.Context_Shrink.*` |
-| Repository | `omlx-prompt-shrink` | `context-shrink-mcp` |
-| Environment variables | `OMLX_SHRINK_*` / `OPENAI_SHRINK_*` | `CONTEXT_SHRINK_*` (both old names still work) |
-
-After pulling, re-point your local config at `context-shrink.py` (and refresh
-the deployed copy if you keep one), then run `/reload`. Existing
-`OMLX_SHRINK_*` / `OPENAI_SHRINK_*` environment settings keep working, so no
-configuration change is strictly required for them.
+**Context Shrink**; the tool names are unchanged and the old repository URL
+redirects. The file path, tool namespace, repository and environment-variable
+mapping is in [`docs/guides/MIGRATION.md`](./docs/guides/MIGRATION.md).
 
 ---
 
