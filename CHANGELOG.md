@@ -44,6 +44,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `requirements.txt` pins the single runtime dependency (`mcp>=2.0,<3.0`); the
   same bound is applied in `requirements-dev.txt`.
 - Optional `.pre-commit-config.yaml` (Ruff + basic hygiene hooks).
+- Opt-in live integration tests (`test/context-shrink-live-tests.py`) that drive a
+  real `compact_context` round-trip against a local OpenAI-compatible endpoint;
+  they skip unless `CONTEXT_SHRINK_LIVE=1` and the endpoint answers, and read the
+  API key from the environment rather than the repo.
+- Node integration tests (`test/js/`) built on the official MCP JS SDK, covering
+  `tools/list` and `estimate_context` offline plus an opt-in live model test.
+- `examples/js-client.js`, the Node port of `examples/python-client.py`.
 
 ### Changed
 

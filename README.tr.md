@@ -470,18 +470,22 @@ Sıkıştırma akışı, ajan modu (iki çağrı):
 `estimate_context` ayrıca kullanılan sayacı belirten bir `tokenizer` alanı döner
 (örneğin `tiktoken:cl100k_base` veya `heuristic(chars/4)`).
 
-### Minimal Python istemci
+### Minimal istemciler
 
-[`examples/python-client.py`](./examples/python-client.py) çalıştırılabilir bir
-istemcidir: sunucuyu stdio üzerinden başlatır, araçları listeler ve
+[`examples/python-client.py`](./examples/python-client.py) ve
+[`examples/js-client.js`](./examples/js-client.js) çalıştırılabilir istemcilerdir:
+her biri sunucuyu stdio üzerinden başlatır, araçları listeler ve
 `estimate_context` çağırır.
 
 ```bash
 python examples/python-client.py                          # ./context-shrink.py kullanır
 python examples/python-client.py /yol/context-shrink.py
+
+cd examples && npm install && node js-client.js           # aynı istemcinin Node sürümü
 ```
 
-`mcp` kurulu olan aynı yorumlayıcıyla çalıştırın.
+Python istemcisini `mcp` kurulu olan aynı yorumlayıcıyla çalıştırın; Node istemcisi
+Node 18+ ve bir kez `npm install` gerektirir.
 
 ---
 
@@ -505,9 +509,12 @@ context-shrink-mcp/
 │   ├── test.sh              # Tek test runner (ruff + pytest)
 │   ├── README.md            # Test klasörü kılavuzu
 │   ├── context-shrink-tests.py # Saf yardımcılar + tokenizer çözümleme + fixture'lar
-│   └── context-shrink-mcp-tests.py # STDIO uçtan uca tur
+│   ├── context-shrink-mcp-tests.py # STDIO uçtan uca tur
+│   ├── context-shrink-live-tests.py # Canlı oMLX entegrasyonu (opt-in)
+│   └── js/                  # Node entegrasyon testleri (MCP JS SDK)
 ├── examples/                # Çalıştırılabilir örnekler
-│   └── python-client.py     # Minimal MCP istemcisi: araçları listele + birini çağır
+│   ├── python-client.py     # Minimal MCP istemcisi: araçları listele + birini çağır
+│   └── js-client.js         # Aynı istemcinin Node sürümü (MCP JS SDK)
 ├── LICENSE                  # MIT
 └── .gitignore
 ```
@@ -525,6 +532,8 @@ context-shrink-mcp/
 
 - **Runner:** [`test/test.sh`](./test/test.sh) geliştirme bağımlılıklarını kurar, Ruff ve ardından pytest çalıştırır. Yorumlayıcı, varsa proje `.venv`'i, yoksa `python3`'tür.
 - **Paketler:** [`test/context-shrink-tests.py`](./test/context-shrink-tests.py) saf yardımcıları (token tahmini, kırpma, sıkıştırma bölme ve parçalama), tokenizer çözümleme mantığını ve ortam değişkeni ayrıştırmayı kapsar — ağ yok. [`test/context-shrink-mcp-tests.py`](./test/context-shrink-mcp-tests.py) ise gerçek STDIO taşıması üzerinden uçtan uca bir tur ekler (el sıkışma → `tools/list` → `tools/call`).
+- **Canlı testler (opt-in):** [`test/context-shrink-live-tests.py`](./test/context-shrink-live-tests.py) ve [`test/js/`](./test/js) içindeki Node paketi gerçek bir uç noktaya bağlanır. `CONTEXT_SHRINK_LIVE=1` ayarlanmadıkça ve uç nokta yanıt vermedikçe atlanır; böylece varsayılan çalıştırma çevrimdışı kalır. API anahtarı `CONTEXT_SHRINK_API_KEY` ortam değişkeninden okunur, repoya asla yazılmaz.
+- **Node testleri:** `cd test/js && npm install && npm test` protokol testlerini resmi MCP JS SDK üzerinden çalıştırır; model testi aynı `CONTEXT_SHRINK_LIVE` bayrağına bağlıdır.
 - **CI:** [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) Ruff, bir `py_compile` kontrolü ve `pytest` çalıştırır. **Yalnızca manuel** tetiklenir — Actions sekmesi → CI → Run workflow.
 
 Sunucuyu elle, bir istemci üzerinden çalıştırmak için:
@@ -544,6 +553,7 @@ python3 context-shrink.py   # stdio sunucusunu başlatır; durdurmak için Ctrl-
 - [CHANGELOG.md](./CHANGELOG.md) — sürüm notları.
 - [OPENAI-API-REFERENCE.md](./OPENAI-API-REFERENCE.md) — sunucunun dayandığı uç nokta, başlıklar ve hata biçimleri.
 - [examples/python-client.py](./examples/python-client.py) — araçları listeleyip birini çağıran çalıştırılabilir bir MCP istemcisi.
+- [examples/js-client.js](./examples/js-client.js) — aynı istemcinin resmi MCP JS SDK ile yazılmış Node sürümü.
 - [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) — bu dosyanın üzerine kurulduğu taşıma katmanı ve `MCPServer` API'si.
 
 ---

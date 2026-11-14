@@ -1,0 +1,12 @@
+{
+  "name": "context-shrink-js-client",
+  "private": true,
+  "type": "module",
+  "description": "Minimal Node MCP client for the Context Shrink server (official MCP JS SDK).",
+  "scripts": {
+    "start": "node js-client.js"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2"
+  }
+}

@@ -474,17 +474,21 @@ Compaction flow, agent mode (two calls):
 `estimate_context` also returns a `tokenizer` field naming the counter in use
 (for example `tiktoken:cl100k_base` or `heuristic(chars/4)`).
 
-### Minimal Python client
+### Minimal clients
 
-[`examples/python-client.py`](./examples/python-client.py) is a runnable client:
-it starts the server over stdio, lists its tools and calls `estimate_context`.
+[`examples/python-client.py`](./examples/python-client.py) and
+[`examples/js-client.js`](./examples/js-client.js) are runnable clients: each
+starts the server over stdio, lists its tools and calls `estimate_context`.
 
 ```bash
 python examples/python-client.py                          # uses ./context-shrink.py
 python examples/python-client.py /path/to/context-shrink.py
+
+cd examples && npm install && node js-client.js           # same client in Node
 ```
 
-Run it with the same interpreter that has `mcp` installed.
+Run the Python client with the same interpreter that has `mcp` installed; the
+Node client needs Node 18+ and `npm install` once.
 
 ---
 
@@ -508,9 +512,12 @@ context-shrink-mcp/
 │   ├── test.sh              # Single test runner (ruff + pytest)
 │   ├── README.md            # Test folder guide
 │   ├── context-shrink-tests.py # Pure helpers + tokenizer resolution + fixtures
-│   └── context-shrink-mcp-tests.py # STDIO end-to-end round-trip
+│   ├── context-shrink-mcp-tests.py # STDIO end-to-end round-trip
+│   ├── context-shrink-live-tests.py # Live oMLX integration (opt-in)
+│   └── js/                  # Node integration tests (MCP JS SDK)
 ├── examples/                # Runnable examples
-│   └── python-client.py     # Minimal MCP client: list tools + call one
+│   ├── python-client.py     # Minimal MCP client: list tools + call one
+│   └── js-client.js         # The same client in Node (MCP JS SDK)
 ├── LICENSE                  # MIT
 └── .gitignore
 ```
@@ -528,6 +535,8 @@ context-shrink-mcp/
 
 - **Runner:** [`test/test.sh`](./test/test.sh) installs the dev dependencies, runs Ruff, then pytest. The interpreter is the project `.venv` when present, otherwise `python3`.
 - **Suites:** [`test/context-shrink-tests.py`](./test/context-shrink-tests.py) covers the pure helpers (token estimation, trimming, compaction splitting and chunking), the tokenizer resolution logic and the env-var parsing — no network. [`test/context-shrink-mcp-tests.py`](./test/context-shrink-mcp-tests.py) adds an end-to-end round-trip over the real STDIO transport (handshake → `tools/list` → `tools/call`).
+- **Live tests (opt-in):** [`test/context-shrink-live-tests.py`](./test/context-shrink-live-tests.py) and the Node suite in [`test/js/`](./test/js) hit a real endpoint. They are skipped unless `CONTEXT_SHRINK_LIVE=1` is set and the endpoint answers, so the default run stays offline. The API key is read from `CONTEXT_SHRINK_API_KEY`, never stored in the repo.
+- **Node tests:** `cd test/js && npm install && npm test` runs the protocol tests through the official MCP JS SDK; the model test is gated by the same `CONTEXT_SHRINK_LIVE` flag.
 - **CI:** [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs Ruff, a `py_compile` check, and `pytest`. It is **manual only** — trigger it with `workflow_dispatch` (Actions tab → CI → Run workflow).
 
 Run the server by hand to exercise it through a client:
@@ -547,6 +556,7 @@ python3 context-shrink.py   # starts the stdio server; Ctrl-C to stop
 - [CHANGELOG.md](./CHANGELOG.md) — release notes.
 - [OPENAI-API-REFERENCE.md](./OPENAI-API-REFERENCE.md) — the endpoint, headers and error shapes this server relies on.
 - [examples/python-client.py](./examples/python-client.py) — a runnable MCP client that lists the tools and calls one.
+- [examples/js-client.js](./examples/js-client.js) — the same client in Node, built on the official MCP JS SDK.
 - [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) — the transport and `MCPServer` API this file is built on.
 
 ---
