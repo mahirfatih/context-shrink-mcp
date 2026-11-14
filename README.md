@@ -7,9 +7,54 @@
 
 🌐 **English** · [Türkçe](./README.tr.md)
 
-**oMLX Prompt Shrink** is a tiny MCP server that keeps **oMLX / local Qwen** requests under the model's context limit. It measures the context before the call, then either **drops** the oldest messages or **compacts** them into a summary — instead of letting the server reject the request.
+**oMLX Prompt Shrink** is a tiny MCP server that keeps **oMLX and any OpenAI-compatible endpoint** requests under the model's context limit. It measures the context before the call, then either **drops** the oldest messages or **compacts** them into a summary — instead of letting the server reject the request.
 
-> **Token counting:** uses `tiktoken` when it is installed (`cl100k_base` by default) for a close approximation, and falls back to a tokenizer-free estimate (character count ÷ 4) otherwise. Either way it is a guard rail, not an exact budget — set `OMLX_SHRINK_TOKENIZER` to change the behaviour.
+> **Token counting:** uses `tiktoken` when it is installed (`cl100k_base` by default) for a close approximation, and falls back to a tokenizer-free estimate (character count ÷ 4) otherwise. Either way it is a guard rail, not an exact budget — set `OPENAI_SHRINK_TOKENIZER` (or the legacy `OMLX_SHRINK_TOKENIZER`) to change the behaviour.
+
+---
+
+## 🔌 Compatible backends
+
+The server only needs an **OpenAI-compatible `/v1/chat/completions` endpoint** —
+local model servers, self-hosted GPU engines and OpenAI gateways all qualify.
+Point it at the endpoint with `OPENAI_SHRINK_BASE_URL` and `OPENAI_SHRINK_MODEL`.
+
+### Quick config for the most common ones
+
+| Backend | Base URL | Model value | Notes |
+| :--- | :--- | :--- | :--- |
+| oMLX | `http://127.0.0.1:8000/v1` | *(default)* | The original target |
+| Ollama | `http://127.0.0.1:11434/v1` | e.g. `qwen2.5-coder` | No API key needed |
+| llama.cpp (`llama-server`) | `http://127.0.0.1:8080/v1` | your GGUF name | CPU/GPU, lightweight |
+| LM Studio | `http://127.0.0.1:1234/v1` | loaded model id | Works out of the box |
+| vLLM | `http://127.0.0.1:8000/v1` | served model id | Production-grade, PagedAttention |
+| Text Generation Inference (TGI) | `http://127.0.0.1:8080/v1` | served model id | HuggingFace, streaming |
+| SGLang | `http://127.0.0.1:30000/v1` | served model id | High throughput |
+| LocalAI | `http://127.0.0.1:8080/v1` | model name | Drop-in replacement |
+| OpenAI / gateway | `https://api.openai.com/v1` | e.g. `gpt-4o-mini` | Set an API key |
+
+Example with Ollama:
+
+```bash
+export OPENAI_SHRINK_BASE_URL="http://127.0.0.1:11434/v1"
+export OPENAI_SHRINK_MODEL="qwen2.5-coder"
+```
+
+### Full catalogue
+
+Anything below can serve as the summarisation endpoint; unlisted
+OpenAI-compatible endpoints work too.
+
+- **Local model servers:** Ollama, llama.cpp (`llama-server`), LM Studio, Jan,
+  GPT4All (Python API), llamafile (`--server`), KoboldCpp, Oobabooga Text
+  Generation WebUI (OpenAI extension), MLC LLM, Petals (distributed)
+- **GPU / production engines:** vLLM, Aphrodite Engine (vLLM fork), TGI,
+  SGLang, NVIDIA NIM / TensorRT-LLM, ExLlamaV2 + TabbyAPI, Xinference,
+  OpenLLM (BentoML), FastChat (LMSYS), LocalAI
+- **Proxies & routers:** LiteLLM (100+ providers), OpenRouter, Portkey Gateway,
+  One API / New API, community Ollama-to-OpenAI proxies
+- **Libraries / custom stacks:** `llama-cpp-python` (`llama_cpp.server`),
+  Transformers + FastAPI, AnythingLLM / Msty
 
 ---
 
@@ -197,13 +242,18 @@ Set the environment variables under `environment` in the MCP entry so `compact_c
 `compact_context` reads its endpoint and model from the environment when the
 arguments are not given:
 
+The `OMLX_SHRINK_*` names are the legacy form; the vendor-neutral
+`OPENAI_SHRINK_*` aliases are identical in meaning and win only when the legacy
+name is unset:
+
 | Variable | Default | Meaning |
 | :--- | :--- | :--- |
-| `OMLX_SHRINK_BASE_URL` | `http://127.0.0.1:8000/v1` | OpenAI-compatible base URL |
-| `OMLX_SHRINK_MODEL` | *(empty)* | Model name to summarise with; empty disables the model mode |
-| `OMLX_SHRINK_API_KEY` | *(empty)* | Bearer token, if the server needs one |
-| `OMLX_SHRINK_TIMEOUT` | `180` | Summariser request timeout, seconds |
-| `OMLX_SHRINK_TOKENIZER` | `auto` | Token counter: `auto` (tiktoken `cl100k_base` if installed, else heuristic), a tiktoken encoding name, or `heuristic`/`off` to always use chars ÷ 4 |
+| `OMLX_SHRINK_BASE_URL` / `OPENAI_SHRINK_BASE_URL` | `http://127.0.0.1:8000/v1` | OpenAI-compatible base URL (a trailing `/chat/completions` is also accepted) |
+| `OMLX_SHRINK_MODEL` / `OPENAI_SHRINK_MODEL` | *(empty)* | Model name to summarise with; empty disables the model mode |
+| `OMLX_SHRINK_API_KEY` / `OPENAI_SHRINK_API_KEY` | *(empty)* | Bearer token, if the server needs one |
+| `OMLX_SHRINK_TIMEOUT` / `OPENAI_SHRINK_TIMEOUT` | `180` | Summariser request timeout, seconds (invalid values fall back to 180) |
+| `OMLX_SHRINK_TOKENIZER` / `OPENAI_SHRINK_TOKENIZER` | `auto` | Token counter: `auto` (tiktoken `cl100k_base` if installed, else heuristic), a tiktoken encoding name, or `heuristic`/`off` to always use chars ÷ 4 |
+| `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `32768` | Default context budget for every tool call |
 
 ### 6. Use it
 

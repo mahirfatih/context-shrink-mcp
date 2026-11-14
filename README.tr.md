@@ -7,9 +7,54 @@
 
 🌐 [English](./README.md) · **Türkçe**
 
-**oMLX Prompt Shrink**, **oMLX / yerel Qwen** isteklerini modelin bağlam (context) sınırının altında tutan küçük bir MCP sunucusudur. Çağrıdan önce bağlamı ölçer, ardından en eski mesajları ya **atar** ya da bir özete **sıkıştırır** — böylece sunucunun isteği reddetmesinin önüne geçer.
+**oMLX Prompt Shrink**, **oMLX ve OpenAI uyumlu herhangi bir uç nokta** isteklerini modelin bağlam (context) sınırının altında tutan küçük bir MCP sunucusudur. Çağrıdan önce bağlamı ölçer, ardından en eski mesajları ya **atar** ya da bir özete **sıkıştırır** — böylece sunucunun isteği reddetmesinin önüne geçer.
 
-> **Token sayımı:** kuruluysa yakın bir tahmin için `tiktoken` kullanır (varsayılan `cl100k_base`), aksi hâlde tokenizer'sız bir tahmine (karakter sayısı ÷ 4) düşer. Her iki durumda da bu bir güvenlik bariyeridir, kesin bir bütçe değildir — davranışı değiştirmek için `OMLX_SHRINK_TOKENIZER` ayarlanır.
+> **Token sayımı:** kuruluysa yakın bir tahmin için `tiktoken` kullanır (varsayılan `cl100k_base`), aksi hâlde tokenizer'sız bir tahmine (karakter sayısı ÷ 4) düşer. Her iki durumda da bu bir güvenlik bariyeridir, kesin bir bütçe değildir — davranışı değiştirmek için `OPENAI_SHRINK_TOKENIZER` (eski adıyla `OMLX_SHRINK_TOKENIZER`) ayarlanır.
+
+---
+
+## 🔌 Uyumlu altyapılar
+
+Sunucu yalnızca bir **OpenAI uyumlu `/v1/chat/completions` uç noktası** ister —
+yerel model sunucuları, kendi GPU'unuzda çalışan motorlar ve OpenAI ağ geçitleri
+hepsi uyar. `OPENAI_SHRINK_BASE_URL` ve `OPENAI_SHRINK_MODEL` ile yönlendirin.
+
+### En yaygın olanlar için hızlı yapılandırma
+
+| Altyapı | Base URL | Model değeri | Notlar |
+| :--- | :--- | :--- | :--- |
+| oMLX | `http://127.0.0.1:8000/v1` | *(varsayılan)* | Orijinal hedef |
+| Ollama | `http://127.0.0.1:11434/v1` | örn. `qwen2.5-coder` | API anahtarı gerektirmez |
+| llama.cpp (`llama-server`) | `http://127.0.0.1:8080/v1` | GGUF adınız | CPU/GPU, hafif |
+| LM Studio | `http://127.0.0.1:1234/v1` | yüklenen model id'si | Kısayol gerekmez |
+| vLLM | `http://127.0.0.1:8000/v1` | sunulan model id'si | Üretim için, PagedAttention |
+| Text Generation Inference (TGI) | `http://127.0.0.1:8080/v1` | sunulan model id'si | HuggingFace, streaming |
+| SGLang | `http://127.0.0.1:30000/v1` | sunulan model id'si | Yüksek verim |
+| LocalAI | `http://127.0.0.1:8080/v1` | model adı | Drop-in replacement |
+| OpenAI / ağ geçidi | `https://api.openai.com/v1` | örn. `gpt-4o-mini` | API anahtarı verin |
+
+Ollama örneği:
+
+```bash
+export OPENAI_SHRINK_BASE_URL="http://127.0.0.1:11434/v1"
+export OPENAI_SHRINK_MODEL="qwen2.5-coder"
+```
+
+### Tam katalog
+
+Aşağıdakilerin hepsi özetleme uç noktası olarak kullanılabilir; listelenmeyen
+OpenAI uyumlu uç noktalar da çalışır.
+
+- **Yerel model sunucuları:** Ollama, llama.cpp (`llama-server`), LM Studio,
+  Jan, GPT4All (Python API), llamafile (`--server`), KoboldCpp, Oobabooga Text
+  Generation WebUI (OpenAI eklentisi), MLC LLM, Petals (dağıtık)
+- **GPU / üretim motorları:** vLLM, Aphrodite Engine (vLLM fork'u), TGI,
+  SGLang, NVIDIA NIM / TensorRT-LLM, ExLlamaV2 + TabbyAPI, Xinference,
+  OpenLLM (BentoML), FastChat (LMSYS), LocalAI
+- **Proxy'ler ve router'lar:** LiteLLM (100+ sağlayıcı), OpenRouter, Portkey
+  Gateway, One API / New API, topluluk Ollama-to-OpenAI proxy'leri
+- **Kütüphaneler / özel yapılar:** `llama-cpp-python` (`llama_cpp.server`),
+  Transformers + FastAPI, AnythingLLM / Msty
 
 ---
 
@@ -195,13 +240,17 @@ Yapılandırma değişiklikleri yeniden başlatma gerektirmez — OpenCode yapı
 
 `compact_context`, argümanlar verilmediğinde endpoint'ini ve modelini ortamdan okur:
 
+`OMLX_SHRINK_*` adları eski biçimdir; tedarikçi-tarafsız `OPENAI_SHRINK_*`
+diğer adları aynı anlama gelir ve yalnızca eski ad ayarlı değilse geçerlidir:
+
 | Değişken | Varsayılan | Anlamı |
 | :--- | :--- | :--- |
-| `OMLX_SHRINK_BASE_URL` | `http://127.0.0.1:8000/v1` | OpenAI-uyumlu base URL |
-| `OMLX_SHRINK_MODEL` | *(boş)* | Özetleme için kullanılacak model adı; boşsa model modu kapalıdır |
-| `OMLX_SHRINK_API_KEY` | *(boş)* | Sunucu gerektiriyorsa Bearer token |
-| `OMLX_SHRINK_TIMEOUT` | `180` | Özetleyici istek zaman aşımı, saniye |
-| `OMLX_SHRINK_TOKENIZER` | `auto` | Token sayacı: `auto` (kuruluysa tiktoken `cl100k_base`, yoksa heuristic), bir tiktoken encoding adı veya her zaman karakter ÷ 4 için `heuristic`/`off` |
+| `OMLX_SHRINK_BASE_URL` / `OPENAI_SHRINK_BASE_URL` | `http://127.0.0.1:8000/v1` | OpenAI-uyumlu base URL (sonunda `/chat/completions` olan da kabul edilir) |
+| `OMLX_SHRINK_MODEL` / `OPENAI_SHRINK_MODEL` | *(boş)* | Özetleme için kullanılacak model adı; boşsa model modu kapalıdır |
+| `OMLX_SHRINK_API_KEY` / `OPENAI_SHRINK_API_KEY` | *(boş)* | Sunucu gerektiriyorsa Bearer token |
+| `OMLX_SHRINK_TIMEOUT` / `OPENAI_SHRINK_TIMEOUT` | `180` | Özetleyici istek zaman aşımı, saniye (geçersiz değer 180'e düşer) |
+| `OMLX_SHRINK_TOKENIZER` / `OPENAI_SHRINK_TOKENIZER` | `auto` | Token sayacı: `auto` (kuruluysa tiktoken `cl100k_base`, yoksa heuristic), bir tiktoken encoding adı veya her zaman karakter ÷ 4 için `heuristic`/`off` |
+| `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `32768` | Her araç çağrısı için varsayılan bağlam bütçesi |
 
 ### 6. Kullanın
 

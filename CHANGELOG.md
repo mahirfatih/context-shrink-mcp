@@ -19,12 +19,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only**.
 - Turkish README (`README.tr.md`) and a language switcher between both READMEs.
 - `CONTRIBUTING.md` and this changelog.
+- Vendor-neutral `OPENAI_SHRINK_*` environment aliases for every configuration
+  variable (the legacy `OMLX_SHRINK_*` names still win when both are set).
+- `*_MAX_CONTEXT_TOKENS` overrides the default context budget.
+- Startup hardening: clear messages on missing/outdated `mcp` and Python < 3.10,
+  UTF-8 stdio on Windows, tolerant parsing of invalid timeout values, clean exit
+  on Ctrl-C / closed pipe.
 
 ### Changed
 
 - MCP server display name is now **oMLX Prompt Shrink**.
 - Renamed `server.py` to `omlx-prompt-shrink.py`.
 - `estimate_context` output now includes a `tokenizer` field.
+- Positioned as a generic OpenAI-compatible context guard: any
+  `/v1/chat/completions` endpoint works (llama.cpp, LM Studio, Ollama, vLLM,
+  OpenAI gateways), documented with per-backend base URLs in both READMEs.
 
 ### Documentation
 
