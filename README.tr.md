@@ -1,4 +1,4 @@
-# oMLX Prompt Shrink
+# Context Shrink
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![MCP](https://img.shields.io/badge/MCP-stdio-lightgrey)
@@ -7,9 +7,18 @@
 
 🌐 [English](./README.md) · **Türkçe**
 
-**oMLX Prompt Shrink**, **oMLX ve OpenAI uyumlu herhangi bir uç nokta** isteklerini modelin bağlam (context) sınırının altında tutan küçük bir MCP sunucusudur. Çağrıdan önce bağlamı ölçer, ardından en eski mesajları ya **atar** ya da bir özete **sıkıştırır** — böylece sunucunun isteği reddetmesinin önüne geçer.
+**Context Shrink**, **OpenAI uyumlu herhangi bir uç noktaya** giden istekleri modelin bağlam (context) sınırının altında tutan küçük bir MCP sunucusudur. Çağrıdan önce bağlamı ölçer, ardından en eski mesajları ya **atar** ya da bir özete **sıkıştırır** — böylece sunucunun isteği reddetmesinin önüne geçer. Şunlarla çalışır (örnek):
 
-> **Token sayımı:** kuruluysa yakın bir tahmin için `tiktoken` kullanır (varsayılan `cl100k_base`), aksi hâlde tokenizer'sız bir tahmine (karakter sayısı ÷ 4) düşer. Her iki durumda da bu bir güvenlik bariyeridir, kesin bir bütçe değildir — davranışı değiştirmek için `OPENAI_SHRINK_TOKENIZER` (eski adıyla `OMLX_SHRINK_TOKENIZER`) ayarlanır.
+- oMLX
+- llama.cpp (`llama-server`)
+- LM Studio
+- vLLM
+- OpenAI API'si
+- OpenAI uyumlu herhangi bir ağ geçidi
+
+Tam liste için [Uyumlu altyapılar](#-uyumlu-altyapılar) bölümüne bakın.
+
+> **Token sayımı:** kuruluysa yakın bir tahmin için `tiktoken` kullanır (varsayılan `cl100k_base`), aksi hâlde tokenizer'sız bir tahmine (karakter sayısı ÷ 4) düşer. Her iki durumda da bu bir güvenlik bariyeridir, kesin bir bütçe değildir — davranışı değiştirmek için `CONTEXT_SHRINK_TOKENIZER` (veya eski `OMLX_SHRINK_*` / `OPENAI_SHRINK_*` adları) ayarlanır.
 
 ---
 
@@ -17,7 +26,7 @@
 
 Sunucu yalnızca bir **OpenAI uyumlu `/v1/chat/completions` uç noktası** ister —
 yerel model sunucuları, kendi GPU'unuzda çalışan motorlar ve OpenAI ağ geçitleri
-hepsi uyar. `OPENAI_SHRINK_BASE_URL` ve `OPENAI_SHRINK_MODEL` ile yönlendirin.
+hepsi uyar. `CONTEXT_SHRINK_BASE_URL` ve `CONTEXT_SHRINK_MODEL` ile yönlendirin.
 Tel protokolü, başlıklar ve hata biçimleri
 [`OPENAI-API-REFERENCE.md`](./OPENAI-API-REFERENCE.md) dosyasında özetlenmiştir.
 
@@ -38,39 +47,61 @@ Tel protokolü, başlıklar ve hata biçimleri
 Ollama örneği:
 
 ```bash
-export OPENAI_SHRINK_BASE_URL="http://127.0.0.1:11434/v1"
-export OPENAI_SHRINK_MODEL="qwen2.5-coder"
+export CONTEXT_SHRINK_BASE_URL="http://127.0.0.1:11434/v1"
+export CONTEXT_SHRINK_MODEL="qwen2.5-coder"
 ```
 
 ### ☁️ Uzak / bulut OpenAI-uyumlu sağlayıcılar
 
 Yerel tek seçenek değil: büyük sağlayıcıların hepsi OpenAI uyumlu bir
 `/v1/chat/completions` uç noktası sunar. Sunucuyu ona yöneltin ve
-`OPENAI_SHRINK_API_KEY` verin:
+`CONTEXT_SHRINK_API_KEY` verin. Hepsi bir anahtar ya da token ister.
 
-| Sağlayıcı | Base URL | Model değeri | Notlar |
-| :--- | :--- | :--- | :--- |
-| OpenAI | `https://api.openai.com/v1` | örn. `gpt-4o-mini` | API anahtarı gerekli |
-| Azure OpenAI | `https://{resource}.openai.azure.com/openai/deployments/{deployment}` | deployment adınız | `Authorization` yerine `api-key` başlığı gerekir — aşağıya bakın |
-| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` | API anahtarı gerekli |
-| Groq | `https://api.groq.com/openai/v1` | örn. `llama-3.3-70b-versatile` | Çok hızlı, API anahtarı gerekli |
-| Together AI | `https://api.together.xyz/v1` | örn. `meta-llama/Llama-3.3-70B-Instruct-Turbo` | API anahtarı gerekli |
-| Fireworks AI | `https://api.fireworks.ai/inference/v1` | örn. `accounts/fireworks/models/llama-v3p3-70b-instruct` | API anahtarı gerekli |
-| Mistral API | `https://api.mistral.ai/v1` | `mistral-large-latest` | API anahtarı gerekli |
-| OpenRouter | `https://openrouter.ai/api/v1` | model slug'ı | 200+ modele yönlendirir, API anahtarı gerekli |
-| HuggingFace Inference Endpoints | `https://{endpoint'iniz}/v1` | modeliniz | Özel uç nokta, token gerekli |
-| Cloudflare Workers AI | `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1` | örn. `@cf/meta/llama-3.3-70b-instruct-fp8` | Token gerekli |
+- **OpenAI**
+  - Base URL: https://api.openai.com/v1
+  - Model: gpt-4o-mini
+- **Azure OpenAI**
+  - Base URL: https://{resource}.openai.azure.com/openai/deployments/{deployment}
+  - Model: deployment adınız
+  - `Authorization` yerine `api-key` başlığı kullanır — aşağıya bakın
+- **DeepSeek**
+  - Base URL: https://api.deepseek.com/v1
+  - Model: deepseek-chat
+- **Groq**
+  - Base URL: https://api.groq.com/openai/v1
+  - Model: llama-3.3-70b-versatile
+  - Çok hızlı
+- **Together AI**
+  - Base URL: https://api.together.xyz/v1
+  - Model: meta-llama/Llama-3.3-70B-Instruct-Turbo
+- **Fireworks AI**
+  - Base URL: https://api.fireworks.ai/inference/v1
+  - Model: accounts/fireworks/models/llama-v3p3-70b-instruct
+- **Mistral API**
+  - Base URL: https://api.mistral.ai/v1
+  - Model: mistral-large-latest
+- **OpenRouter**
+  - Base URL: https://openrouter.ai/api/v1
+  - Model: model slug'ı
+  - 200+ modele yönlendirir
+- **HuggingFace Inference Endpoints**
+  - Base URL: https://{endpoint'iniz}/v1
+  - Model: modeliniz
+  - Özel uç nokta
+- **Cloudflare Workers AI**
+  - Base URL: https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1
+  - Model: @cf/meta/llama-3.3-70b-instruct-fp8
 
 Azure OpenAI bearer `Authorization` başlığı kullanmaz; gizli anahtarı özel
 başlık olarak geçirin:
 
 ```bash
-export OPENAI_SHRINK_BASE_URL="https://myresource.openai.azure.com/openai/deployments/my-deployment"
-export OPENAI_SHRINK_MODEL="my-deployment"
-export OPENAI_SHRINK_EXTRA_HEADERS='{"api-key": "azure-secret"}'
+export CONTEXT_SHRINK_BASE_URL="https://myresource.openai.azure.com/openai/deployments/my-deployment"
+export CONTEXT_SHRINK_MODEL="my-deployment"
+export CONTEXT_SHRINK_EXTRA_HEADERS='{"api-key": "azure-secret"}'
 ```
 
-Herhangi bir ağ geçidi için ek statik başlıklar `OPENAI_SHRINK_EXTRA_HEADERS`
+Herhangi bir ağ geçidi için ek statik başlıklar `CONTEXT_SHRINK_EXTRA_HEADERS`
 ile JSON nesnesi biçiminde kabul edilir (örneğin org id ya da özel yönlendirme
 başlığı).
 
@@ -79,16 +110,38 @@ başlığı).
 Aşağıdakilerin hepsi özetleme uç noktası olarak kullanılabilir; listelenmeyen
 OpenAI uyumlu uç noktalar da çalışır.
 
-- **Yerel model sunucuları:** Ollama, llama.cpp (`llama-server`), LM Studio,
-  Jan, GPT4All (Python API), llamafile (`--server`), KoboldCpp, Oobabooga Text
-  Generation WebUI (OpenAI eklentisi), MLC LLM, Petals (dağıtık)
-- **GPU / üretim motorları:** vLLM, Aphrodite Engine (vLLM fork'u), TGI,
-  SGLang, NVIDIA NIM / TensorRT-LLM, ExLlamaV2 + TabbyAPI, Xinference,
-  OpenLLM (BentoML), FastChat (LMSYS), LocalAI
-- **Proxy'ler ve router'lar:** LiteLLM (100+ sağlayıcı), OpenRouter, Portkey
-  Gateway, One API / New API, topluluk Ollama-to-OpenAI proxy'leri
-- **Kütüphaneler / özel yapılar:** `llama-cpp-python` (`llama_cpp.server`),
-  Transformers + FastAPI, AnythingLLM / Msty
+- **Yerel model sunucuları:**
+  - Ollama
+  - llama.cpp (`llama-server`)
+  - LM Studio
+  - Jan
+  - GPT4All (Python API)
+  - llamafile (`--server`)
+  - KoboldCpp
+  - Oobabooga Text Generation WebUI (OpenAI eklentisi)
+  - MLC LLM
+  - Petals (dağıtık)
+- **GPU / üretim motorları:**
+  - vLLM
+  - Aphrodite Engine (vLLM fork'u)
+  - Text Generation Inference (TGI)
+  - SGLang
+  - NVIDIA NIM / TensorRT-LLM
+  - ExLlamaV2 + TabbyAPI
+  - Xinference
+  - OpenLLM (BentoML)
+  - FastChat (LMSYS)
+  - LocalAI
+- **Proxy'ler ve router'lar:**
+  - LiteLLM (100+ sağlayıcı)
+  - OpenRouter
+  - Portkey Gateway
+  - One API / New API
+  - topluluk Ollama-to-OpenAI proxy'leri
+- **Kütüphaneler / özel yapılar:**
+  - `llama-cpp-python` (`llama_cpp.server`)
+  - Transformers + FastAPI
+  - AnythingLLM / Msty
 
 ---
 
@@ -96,7 +149,13 @@ OpenAI uyumlu uç noktalar da çalışır.
 
 Bu sınıftaki modeller için oMLX profilleri **32K bağlam** (`max_context_window: 32768`) ile çalışır. Bu bilinçli bir tercihtir: 4-bit KV önbelleğiyle çalışma zamanı ayak izini model başına yaklaşık 17–20 GB'ta tutar ve Apple Silicon'da prefill'i kısa tutar. Sınırı yükseltmek bedavadır değildir — bağlamdaki her ek token, bellekte ve prefill süresinde ödenir.
 
-Maliyet uzun bir oturumda ortaya çıkar. Sistem promptu, konuşma geçmişi ve araç sonuçları birikir; toplam tavanı aştığında sunucu tüm isteği reddeder:
+Maliyet uzun bir oturumda ortaya çıkar. Toplam tavanı aşana kadar üç şey büyümeye devam eder:
+
+- sistem promptu
+- konuşma geçmişi
+- araç sonuçları
+
+Tavanı aştığında sunucu tüm isteği reddeder:
 
 ```text
 Prompt is too long: 39514 tokens > 32768 maximum context length
@@ -130,11 +189,11 @@ Bağlam pencereniz oturumlarınız için yeterince büyükse ya da istemciniz ge
 
 - **Dil ve Çalışma Zamanı:** Python 3.10+, yalnızca standart kütüphane
 - **Protokol:** Model Context Protocol (MCP), stdio taşıması üzerinden
-- **İstemci:** OpenCode (Code Mode araçları `tools.oMLX_Prompt_Shrink.*` altında gruplar)
+- **İstemci:** OpenCode (Code Mode araçları `tools.Context_Shrink.*` altında gruplar)
 - **Sıkıştırma Motoru:** Yerel OpenAI-uyumlu endpoint üzerinden parçalı (chunked) özetleme
 - **Token Sayımı:** opsiyonel `tiktoken` (varsayılan `cl100k_base`), karakter tabanlı heuristic fallback — zorunlu bağımlılık yok
 - **Bağımlılıklar:** `mcp` (MCP SDK) zorunlu; `tiktoken` opsiyonel — GPU gerekmez
-- **Hedef Sunucu:** oMLX (veya herhangi bir yerel OpenAI-uyumlu sunucu: llama.cpp, LM Studio, …)
+- **Hedef Sunucu:** OpenAI uyumlu herhangi bir sunucu — bkz. [Uyumlu altyapılar](#-uyumlu-altyapılar)
 - **Varsayılanlar:** `max_context_tokens = 32768`, `keep_last = 8`, `threshold = 0.8`
 
 ---
@@ -145,7 +204,7 @@ Bağlam pencereniz oturumlarınız için yeterince büyükse ya da istemciniz ge
 - ✂️ **En eski mesajları at** — `trim_context`, en eski mesajları çıkarılmış mesaj listesini döner; en yeni `keep_last` tanesini korur
 - 🧠 **Atmak yerine sıkıştır** — `compact_context`, en eski mesajları bir **özetle** değiştirir; baştaki sistem mesajlarını ve en yeni `keep_last` tanesini aynen korur
 - 📝 **Üç sıkıştırma modu** — özet verilmiş, modelle üretilmiş veya yalnızca plan (`needs_summary: true`, mesaj içeriği geri döndürülmez)
-- 🌐 **Opsiyonel gerçek tokenizer** — kuruluysa `tiktoken`, aksi hâlde tokenizer'sız tahmin (karakter ÷ 4); seçimi `OMLX_SHRINK_TOKENIZER` belirler
+- 🌐 **Opsiyonel gerçek tokenizer** — kuruluysa `tiktoken`, aksi hâlde tokenizer'sız tahmin (karakter ÷ 4); seçimi `CONTEXT_SHRINK_TOKENIZER` belirler
 - 🔌 **Sade MCP** — herhangi bir MCP istemcisi sunucuyu kullanabilir, yalnızca OpenCode değil
 - 🧩 **Parçalı özetleme** — uzun geçmişler parça parça özetlenir, böylece yerel model özetlerken taşmaz
 - 🔒 **Telemetri yok, ağ çağrısı yok** — opsiyonel yerel özetleyici isteği hariç
@@ -201,7 +260,7 @@ flowchart LR
 döner ve tahmin `threshold` içindeyse, `force: true` geçmediğiniz sürece listeyi
 değiştirmez (`compacted: false`).
 
-> **Model endpoint'i gerekmez:** 1 ve 3. modlar hiçbir `OMLX_SHRINK_*` değişkeni
+> **Model endpoint'i gerekmez:** 1 ve 3. modlar hiçbir `CONTEXT_SHRINK_*` değişkeni
 > olmadan çalışır. Ortam değişkenleri yalnızca 2. modu etkinleştirir.
 
 ---
@@ -226,7 +285,7 @@ pip install "mcp>=2.0"
 
 ### 3. Sunucuyu kopyalayın
 
-`omlx-prompt-shrink.py` dosyasını seçtiğiniz bir dizine kopyalayın (örneğin `~/.config/opencode/mcp/`).
+`context-shrink.py` dosyasını seçtiğiniz bir dizine kopyalayın (örneğin `~/.config/opencode/mcp/`).
 
 > **Not:** `command` dizisindeki `python3` beklediğiniz yorumlayıcı olmayabilir —
 > kurulumunuza göre `/opt/homebrew/bin/python3`, `/usr/bin/python3` veya başka bir
@@ -241,11 +300,11 @@ Sunucuyu OpenCode yapılandırmanıza (`~/.config/opencode/opencode.jsonc`) ekle
 {
   "mcp": {
     "servers": {
-      "oMLX Prompt Shrink": {
+      "Context Shrink": {
         "type": "local",
         "command": [
           "python3",
-          "/absolute/path/to/omlx-prompt-shrink.py"
+          "/absolute/path/to/context-shrink.py"
         ],
         "timeout": 180000
       }
@@ -258,34 +317,73 @@ Yapılandırma değişiklikleri yeniden başlatma gerektirmez — OpenCode yapı
 
 ### 5. (Opsiyonel) Model modunu etkinleştirin
 
-`compact_context` yerel modelle özetleyebilsin diye ortam değişkenlerini MCP girdisindeki `environment` altında ayarlayın:
+`compact_context` yerel modelle özetleyebilsin diye ortam değişkenlerini MCP girdisindeki `environment` altında ayarlayın. Aşağıdaki değerler bu projenin geliştirildiği kurulumdur — Apple Silicon üzerinde yerel bir **oMLX** sunucusu, `Qwen3.6-35B-A3B-4bit` modelini sunar:
 
 ```jsonc
 "environment": {
-  "OMLX_SHRINK_MODEL": "Qwen3.6-35B-A3B-4bit",
-  "OMLX_SHRINK_BASE_URL": "http://127.0.0.1:8000/v1",
-  "OMLX_SHRINK_API_KEY": "omlx-...",
-  "OMLX_SHRINK_TIMEOUT": "180",
-  "OMLX_SHRINK_TOKENIZER": "auto"
+  "CONTEXT_SHRINK_MODEL": "Qwen3.6-35B-A3B-4bit",
+  "CONTEXT_SHRINK_BASE_URL": "http://127.0.0.1:8000/v1",
+  "CONTEXT_SHRINK_API_KEY": "omlx-...",
+  "CONTEXT_SHRINK_TIMEOUT": "180",
+  "CONTEXT_SHRINK_TOKENIZER": "auto"
 }
 ```
+
+### Gerçek kurulum (bu projenin geliştirme makinesi)
+
+Bu sunucu, Apple Silicon bir Mac'te yerel bir **oMLX** sunucusuyla geliştirildi ve
+her gün bu kurulumda kullanılıyor — hedeflediği 32K bağlam profili
+[`mahirfatih/omlx-m1-max-benchmark`](https://github.com/mahirfatih/omlx-m1-max-benchmark)
+deposunda belgelenmiştir. Oradaki OpenCode girdisi, sunucuyu özel bir sanal ortam
+(virtualenv) üzerinden çalıştırır ve özetleyiciyi yerel modele yöneltir:
+
+```jsonc
+{
+  "mcp": {
+    "servers": {
+      "Context Shrink": {
+        "type": "local",
+        "command": [
+          "/absolute/path/to/context-shrink-venv/bin/python",
+          "/absolute/path/to/context-shrink.py"
+        ],
+        "environment": {
+          "CONTEXT_SHRINK_MODEL": "Qwen3.6-35B-A3B-4bit",
+          "CONTEXT_SHRINK_BASE_URL": "http://127.0.0.1:8000/v1",
+          "CONTEXT_SHRINK_API_KEY": "omlx-...",
+          "CONTEXT_SHRINK_TOKENIZER": "auto"
+        },
+        "timeout": 180000
+      }
+    }
+  }
+}
+```
+
+> `CONTEXT_SHRINK_API_KEY`, yerel oMLX sunucusunun beklediği token'dır; burada
+> sansürlenmiştir. Yolları ve anahtarı kendi değerlerinizle değiştirin.
 
 ### Yapılandırma
 
 `compact_context`, argümanlar verilmediğinde endpoint'ini ve modelini ortamdan okur:
 
-`OMLX_SHRINK_*` adları eski biçimdir; tedarikçi-tarafsız `OPENAI_SHRINK_*`
-diğer adları aynı anlama gelir ve yalnızca eski ad ayarlı değilse geçerlidir:
+Kanonik adlar `CONTEXT_SHRINK_*`'tır. Eski `OMLX_SHRINK_*` adları ve
+tedarikçi-tarafsız `OPENAI_SHRINK_*` diğer adları aynı anlama gelir ve yalnızca
+daha yüksek öncelikli bir ad ayarlı değilse kullanılır. Öncelik:
+
+```text
+CONTEXT_SHRINK_*  >  OMLX_SHRINK_* (eski)  >  OPENAI_SHRINK_*
+```
 
 | Değişken | Varsayılan | Anlamı |
 | :--- | :--- | :--- |
-| `OMLX_SHRINK_BASE_URL` / `OPENAI_SHRINK_BASE_URL` | `http://127.0.0.1:8000/v1` | OpenAI-uyumlu base URL (sonunda `/chat/completions` olan da kabul edilir) |
-| `OMLX_SHRINK_MODEL` / `OPENAI_SHRINK_MODEL` | *(boş)* | Özetleme için kullanılacak model adı; boşsa model modu kapalıdır |
-| `OMLX_SHRINK_API_KEY` / `OPENAI_SHRINK_API_KEY` | *(boş)* | Sunucu gerektiriyorsa Bearer token |
-| `OMLX_SHRINK_TIMEOUT` / `OPENAI_SHRINK_TIMEOUT` | `180` | Özetleyici istek zaman aşımı, saniye (geçersiz değer 180'e düşer) |
-| `OMLX_SHRINK_TOKENIZER` / `OPENAI_SHRINK_TOKENIZER` | `auto` | Token sayacı: `auto` (kuruluysa tiktoken `cl100k_base`, yoksa heuristic), bir tiktoken encoding adı veya her zaman karakter ÷ 4 için `heuristic`/`off` |
-| `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `32768` | Her araç çağrısı için varsayılan bağlam bütçesi |
-| `OPENAI_SHRINK_EXTRA_HEADERS` | *(boş)* | Azure OpenAI gibi ağ geçitleri için ek HTTP başlıkları, JSON nesnesi biçiminde (`{"api-key": "..."}`) |
+| `CONTEXT_SHRINK_BASE_URL` / `OMLX_SHRINK_BASE_URL` / `OPENAI_SHRINK_BASE_URL` | `http://127.0.0.1:8000/v1` | OpenAI-uyumlu base URL (sonunda `/chat/completions` olan da kabul edilir) |
+| `CONTEXT_SHRINK_MODEL` / `OMLX_SHRINK_MODEL` / `OPENAI_SHRINK_MODEL` | *(boş)* | Özetleme için kullanılacak model adı; boşsa model modu kapalıdır |
+| `CONTEXT_SHRINK_API_KEY` / `OMLX_SHRINK_API_KEY` / `OPENAI_SHRINK_API_KEY` | *(boş)* | Sunucu gerektiriyorsa Bearer token |
+| `CONTEXT_SHRINK_TIMEOUT` / `OMLX_SHRINK_TIMEOUT` / `OPENAI_SHRINK_TIMEOUT` | `180` | Özetleyici istek zaman aşımı, saniye (geçersiz değer 180'e düşer) |
+| `CONTEXT_SHRINK_TOKENIZER` / `OMLX_SHRINK_TOKENIZER` / `OPENAI_SHRINK_TOKENIZER` | `auto` | Token sayacı: `auto` (kuruluysa tiktoken `cl100k_base`, yoksa heuristic), bir tiktoken encoding adı veya her zaman karakter ÷ 4 için `heuristic`/`off` |
+| `CONTEXT_SHRINK_MAX_CONTEXT_TOKENS` / `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `32768` | Her araç çağrısı için varsayılan bağlam bütçesi |
+| `CONTEXT_SHRINK_EXTRA_HEADERS` / `OMLX_SHRINK_EXTRA_HEADERS` / `OPENAI_SHRINK_EXTRA_HEADERS` | *(boş)* | Azure OpenAI gibi ağ geçitleri için ek HTTP başlıkları, JSON nesnesi biçiminde (`{"api-key": "..."}`) |
 
 ### 6. Kullanın
 
@@ -294,7 +392,7 @@ diğer adları aynı anlama gelir ve yalnızca eski ad ayarlı değilse geçerli
   atmak yerine özü korumak için `compact_context` kullanın.
 - Bir ajan, tahmin sınırı aştığında bunu her istekten önce otomatik yapabilir.
 
-Örnek çağrı:
+Örnek `estimate_context` çağrısı:
 
 ```json
 {
@@ -303,6 +401,15 @@ diğer adları aynı anlama gelir ve yalnızca eski ad ayarlı değilse geçerli
     { "role": "assistant", "content": "ilk yanıt" },
     { "role": "user", "content": "ikinci mesaj" }
   ],
+  "max_context_tokens": 32768
+}
+```
+
+Örnek `trim_context` çağrısı:
+
+```json
+{
+  "messages": [ "..." ],
   "keep_last": 8,
   "max_context_tokens": 32768
 }
@@ -327,13 +434,35 @@ Sıkıştırma akışı, ajan modu (iki çağrı):
    `{ "messages": [...], "force": true, "summary": "<o metin>" }` → sıkıştırılmış
    `messages` listesi.
 
+### Araç parametreleri
+
+| Araç | Parametre | Varsayılan | Anlamı |
+| :--- | :--- | :--- | :--- |
+| *(hepsi)* | `messages` | *(zorunlu)* | `role` / `content` çiftlerinden oluşan konuşma |
+| `estimate_context` | `max_context_tokens` | `32768` | Tahminin karşılaştırılacağı bütçe |
+| `trim_context` | `keep_last` | `8` | Her zaman korunan en yeni mesaj sayısı |
+| `trim_context` | `max_context_tokens` | `32768` | Kırpılacak hedef bütçe |
+| `compact_context` | `keep_last` | `8` | Aynen korunan en yeni mesaj sayısı |
+| `compact_context` | `max_context_tokens` | `32768` | Bağlam bütçesi |
+| `compact_context` | `threshold` | `0.8` | Bütçenin bu oranının üzerinde sıkıştır (aksi hâlde `force` gerekir) |
+| `compact_context` | `force` | `false` | `threshold` altında olsa bile sıkıştır |
+| `compact_context` | `summary` | *(yok)* | Hazır özet (mod 1) |
+| `compact_context` | `model` | *(ortam)* | Üretilen özet için model (mod 2); `""` yalnızca plan adımını zorlar |
+| `compact_context` | `base_url` | *(ortam)* | Özetleyici için uç nokta geçersiz kılma |
+| `compact_context` | `api_key` | *(ortam)* | Özetleyici için Bearer token geçersiz kılma |
+| `compact_context` | `summary_budget_tokens` | `512` | Üretilen özet için üst sınır |
+| `compact_context` | `summary_role` | `"system"` | Özeti taşıyan mesajın rolü |
+
+`estimate_context` ayrıca kullanılan sayacı belirten bir `tokenizer` alanı döner
+(örneğin `tiktoken:cl100k_base` veya `heuristic(chars/4)`).
+
 ---
 
 ## 📂 Proje Yapısı
 
 ```
-omlx-prompt-shrink/
-├── omlx-prompt-shrink.py    # Tek dosyalık MCP sunucusu (ürünün tamamı)
+context-shrink-mcp/
+├── context-shrink.py        # Tek dosyalık MCP sunucusu (ürünün tamamı)
 ├── README.md                # İngilizce dokümantasyon
 ├── README.tr.md             # Bu dosya (Türkçe)
 ├── CONTRIBUTING.md          # Kurulum, testler, commit kuralları
@@ -347,7 +476,7 @@ omlx-prompt-shrink/
 │   ├── test.sh              # Tek test runner (ruff + pytest)
 │   ├── README.md            # Test klasörü kılavuzu
 │   ├── conftest.py          # Sunucu modülünü yola göre yükler; ortak fixture'lar
-│   └── omlx-prompt-shrink-tests.py # Saf yardımcılar + tokenizer çözümleme
+│   └── context-shrink-tests.py # Saf yardımcılar + tokenizer çözümleme
 ├── LICENSE                  # MIT
 └── .gitignore
 ```
@@ -360,7 +489,7 @@ omlx-prompt-shrink/
 ./test/test.sh              # dev bağımlılıkları kur, sonra ruff + pytest
 ./test/test.sh --lint       # yalnızca ruff
 ./test/test.sh --no-install # pip install adımını atla
-./test/test.sh --only test/omlx-prompt-shrink-tests.py::test_compact_uses_provided_summary
+./test/test.sh --only test/context-shrink-tests.py::test_compact_uses_provided_summary
 ```
 
 - **Runner:** [`test/test.sh`](./test/test.sh) geliştirme bağımlılıklarını kurar, Ruff ve ardından pytest çalıştırır. Yorumlayıcı, varsa proje `.venv`'i, yoksa `python3`'tür.
@@ -370,7 +499,7 @@ omlx-prompt-shrink/
 Sunucuyu elle, bir istemci üzerinden çalıştırmak için:
 
 ```bash
-python3 omlx-prompt-shrink.py   # stdio sunucusunu başlatır; durdurmak için Ctrl-C
+python3 context-shrink.py   # stdio sunucusunu başlatır; durdurmak için Ctrl-C
 ```
 
 ---
@@ -379,7 +508,7 @@ python3 omlx-prompt-shrink.py   # stdio sunucusunu başlatır; durdurmak için C
 
 - [README.md](./README.md) — İngilizce sürüm.
 - [README.tr.md](./README.tr.md) — bu dosya.
-- [omlx-prompt-shrink.py](./omlx-prompt-shrink.py) — araç şemaları ve davranışın kaynağı.
+- [context-shrink.py](./context-shrink.py) — araç şemaları ve davranışın kaynağı.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — geliştirme kurulumu, testler ve commit kuralları.
 - [CHANGELOG.md](./CHANGELOG.md) — sürüm notları.
 - [OPENAI-API-REFERENCE.md](./OPENAI-API-REFERENCE.md) — sunucunun dayandığı uç nokta, başlıklar ve hata biçimleri.
@@ -395,6 +524,28 @@ python3 omlx-prompt-shrink.py   # stdio sunucusunu başlatır; durdurmak için C
 
 ---
 
+## 🔁 oMLX Prompt Shrink'tan geçiş
+
+Proje, **oMLX Prompt Shrink** adından tedarikçi-tarafsız **Context Shrink** adına
+taşındı. MCP araç *adları* değişmedi (`estimate_context`, `trim_context`,
+`compact_context`) ve GitHub eski URL'i yönlendirir; yani yalnızca birkaç şeye
+dikkat etmek yeterli:
+
+| Ne | Eski | Yeni |
+| :--- | :--- | :--- |
+| Sunucu dosyası | `omlx-prompt-shrink.py` | `context-shrink.py` |
+| `mcp.json` / `opencode.jsonc` komut yolu | `…/omlx-prompt-shrink.py` | `…/context-shrink.py` |
+| Araç namespace'i | `tools.oMLX_Prompt_Shrink.*` | `tools.Context_Shrink.*` |
+| Depo | `omlx-prompt-shrink` | `context-shrink-mcp` |
+| Ortam değişkenleri | `OMLX_SHRINK_*` / `OPENAI_SHRINK_*` | `CONTEXT_SHRINK_*` (eski adlar da çalışır) |
+
+Çektikten sonra yerel yapılandırmanızı `context-shrink.py`'ye yöneltin (ve
+kopyaladığınız bir sürüm varsa onu da güncelleyin), ardından `/reload` çalıştırın.
+Mevcut `OMLX_SHRINK_*` / `OPENAI_SHRINK_*` ortam ayarları çalışmaya devam eder;
+onlar için yapılandırma değişikliği zorunlu değildir.
+
+---
+
 ## 🔗 Arka Plan
 
 Bu sunucunun ele aldığı 32K profili ve `Prompt is too long` hatası [`mahirfatih/omlx-m1-max-benchmark`](https://github.com/mahirfatih/omlx-m1-max-benchmark) deposunda belgelenmiştir: `docs/reference/PROFILES.md` bağlam penceresinin neden 32K olduğunu açıklar, README ise bu sunucu için öneri bölümünü içerir.
@@ -405,11 +556,11 @@ Bu sunucunun ele aldığı 32K profili ve `Prompt is too long` hatası [`mahirfa
 
 | Ayar / Anahtar | Amaç | Konum |
 | :--- | :--- | :--- |
-| `OMLX_SHRINK_BASE_URL` | OpenAI-uyumlu base URL | ortam / argüman |
-| `OMLX_SHRINK_MODEL` | Özetleme için kullanılan model | ortam / argüman |
-| `OMLX_SHRINK_API_KEY` | Yerel sunucu için Bearer token | ortam / argüman |
-| `OMLX_SHRINK_TIMEOUT` | Özetleyici istek zaman aşımı (saniye) | ortam |
-| `OMLX_SHRINK_TOKENIZER` | Token sayacı seçimi (`auto` / encoding / `heuristic`) | ortam |
+| `CONTEXT_SHRINK_BASE_URL` | OpenAI-uyumlu base URL | ortam / argüman |
+| `CONTEXT_SHRINK_MODEL` | Özetleme için kullanılan model | ortam / argüman |
+| `CONTEXT_SHRINK_API_KEY` | Yerel sunucu için Bearer token | ortam / argüman |
+| `CONTEXT_SHRINK_TIMEOUT` | Özetleyici istek zaman aşımı (saniye) | ortam |
+| `CONTEXT_SHRINK_TOKENIZER` | Token sayacı seçimi (`auto` / encoding / `heuristic`) | ortam |
 
 > **Gizlilik:** Sunucu, yapılandırdığınız yerel OpenAI-uyumlu endpoint'e yapılan opsiyonel özetleyici çağrısı dışında **kendi başına hiçbir ağ isteği yapmaz**. Telemetri yok, analitik yok, hiçbir veri makineden çıkmaz. Tüm durum yalnızca bir araç çağrısı boyunca bellekte tutulur.
 

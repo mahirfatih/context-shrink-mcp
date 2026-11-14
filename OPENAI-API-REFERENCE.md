@@ -13,14 +13,30 @@ configuration surface (`*_BASE_URL`, `*_MODEL`, `*_API_KEY`,
 
 The OpenAI API is an HTTP API for text generation. You send a list of chat
 messages and a model id; you get back the assistant's message. The same wire
-format is implemented by many local servers and gateways (Ollama, llama.cpp,
-LM Studio, vLLM, TGI, SGLang, LocalAI, OpenRouter, LiteLLM, ...), which is why
-one configuration set works everywhere.
+format is implemented by many local servers and gateways, which is why one
+configuration set works everywhere. For example:
 
-The API is organised into endpoint groups (Responses, Chat, Audio, Images,
-Embeddings, Models, Administration, ...). New projects are encouraged to use
+- Ollama
+- llama.cpp
+- LM Studio
+- vLLM
+- Text Generation Inference (TGI)
+- SGLang
+- LocalAI
+- OpenRouter
+- LiteLLM
+
+The API is organised into endpoint groups. New projects are encouraged to use
 the **Responses** API; this server deliberately uses **Chat Completions**
-because it is the most widely re-implemented surface.
+because it is the most widely re-implemented surface. The groups include:
+
+- Responses
+- Chat
+- Audio
+- Images
+- Embeddings
+- Models
+- Administration
 
 ## Endpoint used here
 
@@ -45,8 +61,14 @@ are accepted.
 | `max_tokens` | integer | Upper bound for generated tokens |
 | `stream` | boolean | Always `false` — this server waits for the full answer |
 
-Other parameters defined by the API (`top_p`, `stop`, `n`, `seed`,
-`response_format`, `tools`, ...) are optional and not sent.
+Other parameters defined by the API are optional and not sent:
+
+- `top_p`
+- `stop`
+- `n`
+- `seed`
+- `response_format`
+- `tools`
 
 ### Response body (fields this server reads)
 
@@ -88,10 +110,10 @@ local summarisation runs in short, bounded calls.
   ```
 
 - **Azure OpenAI** does not accept a bearer header. Pass the deployment
-  secret as `api-key` via `OPENAI_SHRINK_EXTRA_HEADERS`:
+  secret as `api-key` via `CONTEXT_SHRINK_EXTRA_HEADERS`:
 
   ```bash
-  export OPENAI_SHRINK_EXTRA_HEADERS='{"api-key": "azure-secret"}'
+  export CONTEXT_SHRINK_EXTRA_HEADERS='{"api-key": "azure-secret"}'
   ```
 
 - Any other static header (gateway routing, org ids) can be supplied the same
@@ -105,9 +127,12 @@ Errors follow the usual HTTP status codes; the body contains an `error` object:
 { "error": { "message": "Invalid API key", "type": "invalid_request_error", "param": null, "code": "invalid_api_key" } }
 ```
 
-Common cases this server reports as plain messages: `401/403` authentication,
-`429` rate limit, `5xx` upstream failure, connection refused/timeouts
-(unreachable endpoint).
+Common cases this server reports as plain messages:
+
+- `401` / `403` — authentication
+- `429` — rate limit
+- `5xx` — upstream failure
+- connection refused / timeout — unreachable endpoint
 
 Response headers worth logging in production:
 

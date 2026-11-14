@@ -1,4 +1,4 @@
-# oMLX Prompt Shrink
+# Context Shrink
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![MCP](https://img.shields.io/badge/MCP-stdio-lightgrey)
@@ -7,9 +7,18 @@
 
 🌐 **English** · [Türkçe](./README.tr.md)
 
-**oMLX Prompt Shrink** is a tiny MCP server that keeps **oMLX and any OpenAI-compatible endpoint** requests under the model's context limit. It measures the context before the call, then either **drops** the oldest messages or **compacts** them into a summary — instead of letting the server reject the request.
+**Context Shrink** is a tiny MCP server that keeps requests to **any OpenAI-compatible endpoint** under the model's context limit. It measures the context before the call, then either **drops** the oldest messages or **compacts** them into a summary — instead of letting the server reject the request. It works with, among others:
 
-> **Token counting:** uses `tiktoken` when it is installed (`cl100k_base` by default) for a close approximation, and falls back to a tokenizer-free estimate (character count ÷ 4) otherwise. Either way it is a guard rail, not an exact budget — set `OPENAI_SHRINK_TOKENIZER` (or the legacy `OMLX_SHRINK_TOKENIZER`) to change the behaviour.
+- oMLX
+- llama.cpp (`llama-server`)
+- LM Studio
+- vLLM
+- the OpenAI API
+- any OpenAI-compatible gateway
+
+See [Compatible backends](#-compatible-backends) for the full list.
+
+> **Token counting:** uses `tiktoken` when it is installed (`cl100k_base` by default) for a close approximation, and falls back to a tokenizer-free estimate (character count ÷ 4) otherwise. Either way it is a guard rail, not an exact budget — set `CONTEXT_SHRINK_TOKENIZER` (or the legacy `OMLX_SHRINK_*` / `OPENAI_SHRINK_*` names) to change the behaviour.
 
 ---
 
@@ -17,7 +26,7 @@
 
 The server only needs an **OpenAI-compatible `/v1/chat/completions` endpoint** —
 local model servers, self-hosted GPU engines and OpenAI gateways all qualify.
-Point it at the endpoint with `OPENAI_SHRINK_BASE_URL` and `OPENAI_SHRINK_MODEL`.
+Point it at the endpoint with `CONTEXT_SHRINK_BASE_URL` and `CONTEXT_SHRINK_MODEL`.
 The wire protocol, headers and error shapes are summarised in
 [`OPENAI-API-REFERENCE.md`](./OPENAI-API-REFERENCE.md).
 
@@ -38,40 +47,62 @@ The wire protocol, headers and error shapes are summarised in
 Example with Ollama:
 
 ```bash
-export OPENAI_SHRINK_BASE_URL="http://127.0.0.1:11434/v1"
-export OPENAI_SHRINK_MODEL="qwen2.5-coder"
+export CONTEXT_SHRINK_BASE_URL="http://127.0.0.1:11434/v1"
+export CONTEXT_SHRINK_MODEL="qwen2.5-coder"
 ```
 
 ### ☁️ Remote / cloud OpenAI-compatible providers
 
 Local is not the only option: every major provider exposes an OpenAI-compatible
 `/v1/chat/completions` endpoint, so point the server at it and set
-`OPENAI_SHRINK_API_KEY`:
+`CONTEXT_SHRINK_API_KEY`. All of these need a key or token.
 
-| Provider | Base URL | Model value | Notes |
-| :--- | :--- | :--- | :--- |
-| OpenAI | `https://api.openai.com/v1` | e.g. `gpt-4o-mini` | API key required |
-| Azure OpenAI | `https://{resource}.openai.azure.com/openai/deployments/{deployment}` | your deployment name | Needs the `api-key` header instead of `Authorization` — see below |
-| DeepSeek | `https://api.deepseek.com/v1` | `deepseek-chat` | API key required |
-| Groq | `https://api.groq.com/openai/v1` | e.g. `llama-3.3-70b-versatile` | Very fast, API key required |
-| Together AI | `https://api.together.xyz/v1` | e.g. `meta-llama/Llama-3.3-70B-Instruct-Turbo` | API key required |
-| Fireworks AI | `https://api.fireworks.ai/inference/v1` | e.g. `accounts/fireworks/models/llama-v3p3-70b-instruct` | API key required |
-| Mistral API | `https://api.mistral.ai/v1` | `mistral-large-latest` | API key required |
-| OpenRouter | `https://openrouter.ai/api/v1` | any model slug | Routes to 200+ models, API key required |
-| HuggingFace Inference Endpoints | `https://{your-endpoint}/v1` | your model | Private endpoint, token required |
-| Cloudflare Workers AI | `https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1` | e.g. `@cf/meta/llama-3.3-70b-instruct-fp8` | Token required |
+- **OpenAI**
+  - Base URL: https://api.openai.com/v1
+  - Model: gpt-4o-mini
+- **Azure OpenAI**
+  - Base URL: https://{resource}.openai.azure.com/openai/deployments/{deployment}
+  - Model: your deployment name
+  - Uses the `api-key` header instead of `Authorization` — see below
+- **DeepSeek**
+  - Base URL: https://api.deepseek.com/v1
+  - Model: deepseek-chat
+- **Groq**
+  - Base URL: https://api.groq.com/openai/v1
+  - Model: llama-3.3-70b-versatile
+  - Very fast
+- **Together AI**
+  - Base URL: https://api.together.xyz/v1
+  - Model: meta-llama/Llama-3.3-70B-Instruct-Turbo
+- **Fireworks AI**
+  - Base URL: https://api.fireworks.ai/inference/v1
+  - Model: accounts/fireworks/models/llama-v3p3-70b-instruct
+- **Mistral API**
+  - Base URL: https://api.mistral.ai/v1
+  - Model: mistral-large-latest
+- **OpenRouter**
+  - Base URL: https://openrouter.ai/api/v1
+  - Model: any model slug
+  - Routes to 200+ models
+- **HuggingFace Inference Endpoints**
+  - Base URL: https://{your-endpoint}/v1
+  - Model: your model
+  - Private endpoint
+- **Cloudflare Workers AI**
+  - Base URL: https://api.cloudflare.com/client/v4/accounts/{account-id}/ai/v1
+  - Model: @cf/meta/llama-3.3-70b-instruct-fp8
 
 Azure OpenAI does not use a bearer `Authorization` header; pass its secret as a
 custom header:
 
 ```bash
-export OPENAI_SHRINK_BASE_URL="https://myresource.openai.azure.com/openai/deployments/my-deployment"
-export OPENAI_SHRINK_MODEL="my-deployment"
-export OPENAI_SHRINK_EXTRA_HEADERS='{"api-key": "azure-secret"}'
+export CONTEXT_SHRINK_BASE_URL="https://myresource.openai.azure.com/openai/deployments/my-deployment"
+export CONTEXT_SHRINK_MODEL="my-deployment"
+export CONTEXT_SHRINK_EXTRA_HEADERS='{"api-key": "azure-secret"}'
 ```
 
 Additional static headers for any gateway are accepted through
-`OPENAI_SHRINK_EXTRA_HEADERS` as a JSON object (for example an org id or a
+`CONTEXT_SHRINK_EXTRA_HEADERS` as a JSON object (for example an org id or a
 custom routing header).
 
 ### Full catalogue
@@ -79,16 +110,38 @@ custom routing header).
 Anything below can serve as the summarisation endpoint; unlisted
 OpenAI-compatible endpoints work too.
 
-- **Local model servers:** Ollama, llama.cpp (`llama-server`), LM Studio, Jan,
-  GPT4All (Python API), llamafile (`--server`), KoboldCpp, Oobabooga Text
-  Generation WebUI (OpenAI extension), MLC LLM, Petals (distributed)
-- **GPU / production engines:** vLLM, Aphrodite Engine (vLLM fork), TGI,
-  SGLang, NVIDIA NIM / TensorRT-LLM, ExLlamaV2 + TabbyAPI, Xinference,
-  OpenLLM (BentoML), FastChat (LMSYS), LocalAI
-- **Proxies & routers:** LiteLLM (100+ providers), OpenRouter, Portkey Gateway,
-  One API / New API, community Ollama-to-OpenAI proxies
-- **Libraries / custom stacks:** `llama-cpp-python` (`llama_cpp.server`),
-  Transformers + FastAPI, AnythingLLM / Msty
+- **Local model servers:**
+  - Ollama
+  - llama.cpp (`llama-server`)
+  - LM Studio
+  - Jan
+  - GPT4All (Python API)
+  - llamafile (`--server`)
+  - KoboldCpp
+  - Oobabooga Text Generation WebUI (OpenAI extension)
+  - MLC LLM
+  - Petals (distributed)
+- **GPU / production engines:**
+  - vLLM
+  - Aphrodite Engine (vLLM fork)
+  - Text Generation Inference (TGI)
+  - SGLang
+  - NVIDIA NIM / TensorRT-LLM
+  - ExLlamaV2 + TabbyAPI
+  - Xinference
+  - OpenLLM (BentoML)
+  - FastChat (LMSYS)
+  - LocalAI
+- **Proxies & routers:**
+  - LiteLLM (100+ providers)
+  - OpenRouter
+  - Portkey Gateway
+  - One API / New API
+  - community Ollama-to-OpenAI proxies
+- **Libraries / custom stacks:**
+  - `llama-cpp-python` (`llama_cpp.server`)
+  - Transformers + FastAPI
+  - AnythingLLM / Msty
 
 ---
 
@@ -96,7 +149,14 @@ OpenAI-compatible endpoints work too.
 
 oMLX profiles for this class of models run **32K context** (`max_context_window: 32768`). That is a deliberate choice: with a 4-bit KV cache it keeps the runtime footprint at roughly 17–20 GB per model and keeps prefill short on Apple Silicon. Raising the limit is not free — every extra token of context is paid for in memory and prefill time.
 
-The cost appears in a long session. The system prompt, the conversation history and the tool results accumulate, and once the total crosses the ceiling the server refuses the whole request:
+The cost appears in a long session. Three things keep growing until the total
+crosses the ceiling:
+
+- the system prompt
+- the conversation history
+- the tool results
+
+Once it crosses, the server refuses the whole request:
 
 ```text
 Prompt is too long: 39514 tokens > 32768 maximum context length
@@ -130,11 +190,11 @@ You probably do not need it if your context window is large enough for your sess
 
 - **Language & Runtime:** Python 3.10+, standard library only
 - **Protocol:** Model Context Protocol (MCP) over stdio transport
-- **Client:** OpenCode (Code Mode groups tools under `tools.oMLX_Prompt_Shrink.*`)
+- **Client:** OpenCode (Code Mode groups tools under `tools.Context_Shrink.*`)
 - **Compaction Engine:** Chunked summarisation via the local OpenAI-compatible endpoint
 - **Token Counting:** optional `tiktoken` (default `cl100k_base`) with a character heuristic fallback — no hard dependency
 - **Dependencies:** `mcp` (MCP SDK) required; `tiktoken` optional — no GPU
-- **Target Server:** oMLX (or any local OpenAI-compatible server: llama.cpp, LM Studio, …)
+- **Target Server:** any OpenAI-compatible server — see [Compatible backends](#-compatible-backends)
 - **Defaults:** `max_context_tokens = 32768`, `keep_last = 8`, `threshold = 0.8`
 
 ---
@@ -145,7 +205,7 @@ You probably do not need it if your context window is large enough for your sess
 - ✂️ **Drop oldest messages** — `trim_context` returns the message list with the oldest messages removed, keeping the most recent `keep_last`
 - 🧠 **Compact instead of drop** — `compact_context` replaces the oldest messages with a **summary**, keeping leading system messages and the most recent `keep_last` verbatim
 - 📝 **Three compaction modes** — summary provided, model-generated, or plan-only (`needs_summary: true`, no message content echoed back)
-- 🌐 **Optional real tokenizer** — uses `tiktoken` when installed, otherwise a tokenizer-free estimate (chars ÷ 4); `OMLX_SHRINK_TOKENIZER` controls the choice
+- 🌐 **Optional real tokenizer** — uses `tiktoken` when installed, otherwise a tokenizer-free estimate (chars ÷ 4); `CONTEXT_SHRINK_TOKENIZER` controls the choice
 - 🔌 **Plain MCP** — any MCP client can use the server, not just OpenCode
 - 🧩 **Chunked summarisation** — long histories are summarised in pieces so the local model does not overflow while summarising
 - 🔒 **No telemetry, no network calls** except the optional local summariser request
@@ -203,7 +263,7 @@ and leaves the list untouched (`compacted: false`) when it is already within
 `threshold` unless you pass `force: true`.
 
 > **No model endpoint required:** modes 1 and 3 work without any
-> `OMLX_SHRINK_*` variable. The environment variables only enable mode 2.
+> `CONTEXT_SHRINK_*` variable. The environment variables only enable mode 2.
 
 ---
 
@@ -227,7 +287,7 @@ pip install "mcp>=2.0"
 
 ### 3. Copy the server
 
-Copy `omlx-prompt-shrink.py` into a directory of your choice (for example `~/.config/opencode/mcp/`).
+Copy `context-shrink.py` into a directory of your choice (for example `~/.config/opencode/mcp/`).
 
 > **Note:** The `python3` in the `command` array may not be the one you expect —
 > depending on your setup it could be `/opt/homebrew/bin/python3`, `/usr/bin/python3`,
@@ -242,11 +302,11 @@ Add the server to your OpenCode config (`~/.config/opencode/opencode.jsonc`):
 {
   "mcp": {
     "servers": {
-      "oMLX Prompt Shrink": {
+      "Context Shrink": {
         "type": "local",
         "command": [
           "python3",
-          "/absolute/path/to/omlx-prompt-shrink.py"
+          "/absolute/path/to/context-shrink.py"
         ],
         "timeout": 180000
       }
@@ -259,36 +319,74 @@ Config changes apply without a restart — OpenCode watches config files and rel
 
 ### 5. (Optional) Enable model mode
 
-Set the environment variables under `environment` in the MCP entry so `compact_context` can summarise with the local model:
+Set the environment variables under `environment` in the MCP entry so `compact_context` can summarise with the local model. The values below are the ones this project was developed with — a local **oMLX** server on Apple Silicon, serving `Qwen3.6-35B-A3B-4bit`:
 
 ```jsonc
 "environment": {
-  "OMLX_SHRINK_MODEL": "Qwen3.6-35B-A3B-4bit",
-  "OMLX_SHRINK_BASE_URL": "http://127.0.0.1:8000/v1",
-  "OMLX_SHRINK_API_KEY": "omlx-...",
-  "OMLX_SHRINK_TIMEOUT": "180",
-  "OMLX_SHRINK_TOKENIZER": "auto"
+  "CONTEXT_SHRINK_MODEL": "Qwen3.6-35B-A3B-4bit",
+  "CONTEXT_SHRINK_BASE_URL": "http://127.0.0.1:8000/v1",
+  "CONTEXT_SHRINK_API_KEY": "omlx-...",
+  "CONTEXT_SHRINK_TIMEOUT": "180",
+  "CONTEXT_SHRINK_TOKENIZER": "auto"
 }
 ```
+
+### A real setup (this project's development machine)
+
+This server was written for, and is used daily on, an Apple Silicon Mac driving a
+local **oMLX** server — the 32K context profile it targets is documented in
+[`mahirfatih/omlx-m1-max-benchmark`](https://github.com/mahirfatih/omlx-m1-max-benchmark).
+The OpenCode entry used there runs the server from a dedicated virtualenv and
+points the summariser at the local model:
+
+```jsonc
+{
+  "mcp": {
+    "servers": {
+      "Context Shrink": {
+        "type": "local",
+        "command": [
+          "/absolute/path/to/context-shrink-venv/bin/python",
+          "/absolute/path/to/context-shrink.py"
+        ],
+        "environment": {
+          "CONTEXT_SHRINK_MODEL": "Qwen3.6-35B-A3B-4bit",
+          "CONTEXT_SHRINK_BASE_URL": "http://127.0.0.1:8000/v1",
+          "CONTEXT_SHRINK_API_KEY": "omlx-...",
+          "CONTEXT_SHRINK_TOKENIZER": "auto"
+        },
+        "timeout": 180000
+      }
+    }
+  }
+}
+```
+
+> The `CONTEXT_SHRINK_API_KEY` is the token the local oMLX server expects; it is
+> redacted here. Replace the paths and the key with your own.
 
 ### Configuration
 
 `compact_context` reads its endpoint and model from the environment when the
-arguments are not given:
+arguments are not given.
 
-The `OMLX_SHRINK_*` names are the legacy form; the vendor-neutral
-`OPENAI_SHRINK_*` aliases are identical in meaning and win only when the legacy
-name is unset:
+The canonical names are `CONTEXT_SHRINK_*`. The legacy `OMLX_SHRINK_*` names and
+the vendor-neutral `OPENAI_SHRINK_*` aliases are identical in meaning and are
+used only when every higher-precedence name is unset. Precedence:
+
+```text
+CONTEXT_SHRINK_*  >  OMLX_SHRINK_* (legacy)  >  OPENAI_SHRINK_*
+```
 
 | Variable | Default | Meaning |
 | :--- | :--- | :--- |
-| `OMLX_SHRINK_BASE_URL` / `OPENAI_SHRINK_BASE_URL` | `http://127.0.0.1:8000/v1` | OpenAI-compatible base URL (a trailing `/chat/completions` is also accepted) |
-| `OMLX_SHRINK_MODEL` / `OPENAI_SHRINK_MODEL` | *(empty)* | Model name to summarise with; empty disables the model mode |
-| `OMLX_SHRINK_API_KEY` / `OPENAI_SHRINK_API_KEY` | *(empty)* | Bearer token, if the server needs one |
-| `OMLX_SHRINK_TIMEOUT` / `OPENAI_SHRINK_TIMEOUT` | `180` | Summariser request timeout, seconds (invalid values fall back to 180) |
-| `OMLX_SHRINK_TOKENIZER` / `OPENAI_SHRINK_TOKENIZER` | `auto` | Token counter: `auto` (tiktoken `cl100k_base` if installed, else heuristic), a tiktoken encoding name, or `heuristic`/`off` to always use chars ÷ 4 |
-| `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `32768` | Default context budget for every tool call |
-| `OPENAI_SHRINK_EXTRA_HEADERS` | *(empty)* | Extra HTTP headers as a JSON object, for gateways such as Azure OpenAI (`{"api-key": "..."}`) |
+| `CONTEXT_SHRINK_BASE_URL` / `OMLX_SHRINK_BASE_URL` / `OPENAI_SHRINK_BASE_URL` | `http://127.0.0.1:8000/v1` | OpenAI-compatible base URL (a trailing `/chat/completions` is also accepted) |
+| `CONTEXT_SHRINK_MODEL` / `OMLX_SHRINK_MODEL` / `OPENAI_SHRINK_MODEL` | *(empty)* | Model name to summarise with; empty disables the model mode |
+| `CONTEXT_SHRINK_API_KEY` / `OMLX_SHRINK_API_KEY` / `OPENAI_SHRINK_API_KEY` | *(empty)* | Bearer token, if the server needs one |
+| `CONTEXT_SHRINK_TIMEOUT` / `OMLX_SHRINK_TIMEOUT` / `OPENAI_SHRINK_TIMEOUT` | `180` | Summariser request timeout, seconds (invalid values fall back to 180) |
+| `CONTEXT_SHRINK_TOKENIZER` / `OMLX_SHRINK_TOKENIZER` / `OPENAI_SHRINK_TOKENIZER` | `auto` | Token counter: `auto` (tiktoken `cl100k_base` if installed, else heuristic), a tiktoken encoding name, or `heuristic`/`off` to always use chars ÷ 4 |
+| `CONTEXT_SHRINK_MAX_CONTEXT_TOKENS` / `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `32768` | Default context budget for every tool call |
+| `CONTEXT_SHRINK_EXTRA_HEADERS` / `OMLX_SHRINK_EXTRA_HEADERS` / `OPENAI_SHRINK_EXTRA_HEADERS` | *(empty)* | Extra HTTP headers as a JSON object, for gateways such as Azure OpenAI (`{"api-key": "..."}`) |
 
 ### 6. Use it
 
@@ -298,7 +396,7 @@ name is unset:
 - An agent can do this automatically before every request when the estimate
   crosses the limit.
 
-Example call:
+Example `estimate_context` call:
 
 ```json
 {
@@ -307,6 +405,15 @@ Example call:
     { "role": "assistant", "content": "first answer" },
     { "role": "user", "content": "second message" }
   ],
+  "max_context_tokens": 32768
+}
+```
+
+Example `trim_context` call:
+
+```json
+{
+  "messages": [ "..." ],
   "keep_last": 8,
   "max_context_tokens": 32768
 }
@@ -331,13 +438,35 @@ Compaction flow, agent mode (two calls):
    `{ "messages": [...], "force": true, "summary": "<that text>" }` → the
    compacted `messages` list.
 
+### Tool parameters
+
+| Tool | Parameter | Default | Meaning |
+| :--- | :--- | :--- | :--- |
+| *(all)* | `messages` | *(required)* | Conversation as `role` / `content` pairs |
+| `estimate_context` | `max_context_tokens` | `32768` | Budget to compare the estimate against |
+| `trim_context` | `keep_last` | `8` | Newest messages always kept |
+| `trim_context` | `max_context_tokens` | `32768` | Budget to trim down to |
+| `compact_context` | `keep_last` | `8` | Newest messages kept verbatim |
+| `compact_context` | `max_context_tokens` | `32768` | Context budget |
+| `compact_context` | `threshold` | `0.8` | Compact only above this fraction of the budget (unless `force`) |
+| `compact_context` | `force` | `false` | Compact even when under `threshold` |
+| `compact_context` | `summary` | *(none)* | Pre-written summary (mode 1) |
+| `compact_context` | `model` | *(env)* | Model for a generated summary (mode 2); `""` forces plan-only |
+| `compact_context` | `base_url` | *(env)* | Endpoint override for the summariser |
+| `compact_context` | `api_key` | *(env)* | Bearer token override for the summariser |
+| `compact_context` | `summary_budget_tokens` | `512` | Upper bound for the generated summary |
+| `compact_context` | `summary_role` | `"system"` | Role of the message that carries the summary |
+
+`estimate_context` also returns a `tokenizer` field naming the counter in use
+(for example `tiktoken:cl100k_base` or `heuristic(chars/4)`).
+
 ---
 
 ## 📂 Project Structure
 
 ```
-omlx-prompt-shrink/
-├── omlx-prompt-shrink.py    # Single-file MCP server (the whole product)
+context-shrink-mcp/
+├── context-shrink.py        # Single-file MCP server (the whole product)
 ├── README.md                # English documentation
 ├── README.tr.md             # Turkish documentation
 ├── CONTRIBUTING.md          # Setup, tests, commit conventions
@@ -351,7 +480,7 @@ omlx-prompt-shrink/
 │   ├── test.sh              # Single test runner (ruff + pytest)
 │   ├── README.md            # Test folder guide
 │   ├── conftest.py          # Loads the server module by path; shared fixtures
-│   └── omlx-prompt-shrink-tests.py # Pure helpers + tokenizer resolution
+│   └── context-shrink-tests.py # Pure helpers + tokenizer resolution
 ├── LICENSE                  # MIT
 └── .gitignore
 ```
@@ -364,7 +493,7 @@ omlx-prompt-shrink/
 ./test/test.sh              # install dev deps, then ruff + pytest
 ./test/test.sh --lint       # ruff only
 ./test/test.sh --no-install # skip the pip install step
-./test/test.sh --only test/omlx-prompt-shrink-tests.py::test_compact_uses_provided_summary
+./test/test.sh --only test/context-shrink-tests.py::test_compact_uses_provided_summary
 ```
 
 - **Runner:** [`test/test.sh`](./test/test.sh) installs the dev dependencies, runs Ruff, then pytest. The interpreter is the project `.venv` when present, otherwise `python3`.
@@ -374,7 +503,7 @@ omlx-prompt-shrink/
 Run the server by hand to exercise it through a client:
 
 ```bash
-python3 omlx-prompt-shrink.py   # starts the stdio server; Ctrl-C to stop
+python3 context-shrink.py   # starts the stdio server; Ctrl-C to stop
 ```
 
 ---
@@ -383,7 +512,7 @@ python3 omlx-prompt-shrink.py   # starts the stdio server; Ctrl-C to stop
 
 - [README.md](./README.md) — this file.
 - [README.tr.md](./README.tr.md) — Turkish translation.
-- [omlx-prompt-shrink.py](./omlx-prompt-shrink.py) — source of truth for tool schemas and behaviour.
+- [context-shrink.py](./context-shrink.py) — source of truth for tool schemas and behaviour.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — development setup, tests, and commit conventions.
 - [CHANGELOG.md](./CHANGELOG.md) — release notes.
 - [OPENAI-API-REFERENCE.md](./OPENAI-API-REFERENCE.md) — the endpoint, headers and error shapes this server relies on.
@@ -399,6 +528,28 @@ python3 omlx-prompt-shrink.py   # starts the stdio server; Ctrl-C to stop
 
 ---
 
+## 🔁 Migrating from oMLX Prompt Shrink
+
+The project was renamed from **oMLX Prompt Shrink** to the vendor-neutral
+**Context Shrink**. The MCP tool *names* are unchanged (`estimate_context`,
+`trim_context`, `compact_context`) and the GitHub repo redirects the old URL, so
+only a few things need attention:
+
+| What | Before | After |
+| :--- | :--- | :--- |
+| Server file | `omlx-prompt-shrink.py` | `context-shrink.py` |
+| `mcp.json` / `opencode.jsonc` command path | `…/omlx-prompt-shrink.py` | `…/context-shrink.py` |
+| Tool namespace | `tools.oMLX_Prompt_Shrink.*` | `tools.Context_Shrink.*` |
+| Repository | `omlx-prompt-shrink` | `context-shrink-mcp` |
+| Environment variables | `OMLX_SHRINK_*` / `OPENAI_SHRINK_*` | `CONTEXT_SHRINK_*` (both old names still work) |
+
+After pulling, re-point your local config at `context-shrink.py` (and refresh
+the deployed copy if you keep one), then run `/reload`. Existing
+`OMLX_SHRINK_*` / `OPENAI_SHRINK_*` environment settings keep working, so no
+configuration change is strictly required for them.
+
+---
+
 ## 🔗 Background
 
 The 32K profile and the `Prompt is too long` failure this server addresses are documented in [`mahirfatih/omlx-m1-max-benchmark`](https://github.com/mahirfatih/omlx-m1-max-benchmark): `docs/reference/PROFILES.md` explains why the context window is set to 32K, and the README has the recommendation section for this server.
@@ -409,11 +560,11 @@ The 32K profile and the `Prompt is too long` failure this server addresses are d
 
 | Setting / Key | Purpose | Location |
 | :--- | :--- | :--- |
-| `OMLX_SHRINK_BASE_URL` | OpenAI-compatible base URL | environment / argument |
-| `OMLX_SHRINK_MODEL` | Model used for summarisation | environment / argument |
-| `OMLX_SHRINK_API_KEY` | Bearer token for the local server | environment / argument |
-| `OMLX_SHRINK_TIMEOUT` | Summariser request timeout (seconds) | environment |
-| `OMLX_SHRINK_TOKENIZER` | Token counter selection (`auto` / encoding / `heuristic`) | environment |
+| `CONTEXT_SHRINK_BASE_URL` | OpenAI-compatible base URL | environment / argument |
+| `CONTEXT_SHRINK_MODEL` | Model used for summarisation | environment / argument |
+| `CONTEXT_SHRINK_API_KEY` | Bearer token for the local server | environment / argument |
+| `CONTEXT_SHRINK_TIMEOUT` | Summariser request timeout (seconds) | environment |
+| `CONTEXT_SHRINK_TOKENIZER` | Token counter selection (`auto` / encoding / `heuristic`) | environment |
 
 > **Privacy:** The server makes **no network requests** of its own except the optional summariser call to the local OpenAI-compatible endpoint you configure. No telemetry, no analytics, no data leaves the machine. All state is in-memory for the duration of a tool call.
 

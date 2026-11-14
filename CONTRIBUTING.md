@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest in **oMLX Prompt Shrink**. This is a small, dependency-light
+Thanks for your interest in **Context Shrink**. This is a small, dependency-light
 MCP server, so the contribution surface is intentionally narrow.
 
 ## Development setup

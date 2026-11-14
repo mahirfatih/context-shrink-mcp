@@ -5,13 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0]
 
 ### Added
 
+- `estimate_context`, `trim_context`, and `compact_context` tools that keep
+  OpenAI-compatible models under their context window.
 - Optional real tokenizer: `tiktoken` is used when installed (`cl100k_base` by
   default), with a character-based heuristic fallback, controlled by
-  `OMLX_SHRINK_TOKENIZER`.
+  `CONTEXT_SHRINK_TOKENIZER`.
 - `pytest` unit tests for the pure helpers and the tokenizer resolution logic.
 - `test/` folder with a single runner, `test/test.sh` (Ruff + pytest), and
   kebab-case test file names.
@@ -19,17 +21,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   only**.
 - Turkish README (`README.tr.md`) and a language switcher between both READMEs.
 - `CONTRIBUTING.md` and this changelog.
-- Vendor-neutral `OPENAI_SHRINK_*` environment aliases for every configuration
-  variable (the legacy `OMLX_SHRINK_*` names still win when both are set).
+- `CONTEXT_SHRINK_*` environment variables as the canonical names; the legacy
+  `OMLX_SHRINK_*` names and the vendor-neutral `OPENAI_SHRINK_*` aliases are
+  still accepted, in that precedence order.
 - `*_MAX_CONTEXT_TOKENS` overrides the default context budget.
+- `*_EXTRA_HEADERS` (a JSON object) sends static HTTP headers for gateways such
+  as Azure OpenAI, whose `api-key` header replaces the bearer token.
+- Remote/cloud OpenAI-compatible providers, documented with per-provider base
+  URLs in both READMEs.
+- `OPENAI-API-REFERENCE.md`: the endpoint, request/response fields, headers and
+  error shapes the server relies on.
 - Startup hardening: clear messages on missing/outdated `mcp` and Python < 3.10,
   UTF-8 stdio on Windows, tolerant parsing of invalid timeout values, clean exit
   on Ctrl-C / closed pipe.
 
 ### Changed
 
-- MCP server display name is now **oMLX Prompt Shrink**.
-- Renamed `server.py` to `omlx-prompt-shrink.py`.
+- Project name is **Context Shrink**: the server file is `context-shrink.py` and
+  the repository is `context-shrink-mcp`. The MCP server display name is
+  **Context Shrink**, so tools are grouped under `tools.Context_Shrink.*`; the
+  tool names themselves are unchanged.
 - `estimate_context` output now includes a `tokenizer` field.
 - Positioned as a generic OpenAI-compatible context guard: any
   `/v1/chat/completions` endpoint works (llama.cpp, LM Studio, Ollama, vLLM,
@@ -39,10 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Rewrote `README.md` in a structured, project-style layout and documented the
   three `compact_context` modes.
-
-## [1.0.0]
-
-### Added
-
-- Initial release: `estimate_context`, `trim_context`, and `compact_context`
-  tools that keep local OpenAI-compatible models under their context window.
+- Documented the full tool parameter surface (including `threshold`,
+  `summary_budget_tokens` and `summary_role`).
+- Added a migration guide to both READMEs for the rename (file path, tool
+  namespace, repository and environment variables).
