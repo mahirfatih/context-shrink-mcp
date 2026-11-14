@@ -4,7 +4,7 @@
 // tools and calls one of them. Run it with node >= 18 after `npm install`:
 //
 //   npm install
-//   node js-client.js [path/to/context-shrink.py]
+//   node js-client.js [path/to/context_shrink.py]
 
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -14,7 +14,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const defaultServer = resolve(here, "..", "context-shrink.py");
+const defaultServer = resolve(here, "..", "context_shrink.py");
 const serverFile = process.argv[2] ?? defaultServer;
 
 function pythonCommand() {

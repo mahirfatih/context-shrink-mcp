@@ -19,7 +19,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const serverFile = resolve(here, "..", "..", "context-shrink.py");
+const serverFile = resolve(here, "..", "..", "context_shrink.py");
 
 const BASE_URL = process.env.CONTEXT_SHRINK_BASE_URL ?? "http://127.0.0.1:8000/v1";
 const API_KEY = process.env.CONTEXT_SHRINK_API_KEY ?? "";

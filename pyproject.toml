@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "context-shrink-mcp"
+version = "1.0.0"
+description = "OpenAI-compatible context guard MCP server: estimate, trim and compact a chat history under its context window."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "mahirfatih" }]
+keywords = ["mcp", "model-context-protocol", "context", "tokens", "llm", "openai"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries",
+]
+dependencies = ["mcp>=2.0,<3.0"]
+
+[project.optional-dependencies]
+tokenizer = ["tiktoken"]
+
+[project.urls]
+Homepage = "https://github.com/mahirfatih/context-shrink-mcp"
+Repository = "https://github.com/mahirfatih/context-shrink-mcp"
+Issues = "https://github.com/mahirfatih/context-shrink-mcp/issues"
+
+[project.scripts]
+context-shrink = "context_shrink:main"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["context_shrink.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/context_shrink.py",
+  "/context-shrink.py",
+  "/pyproject.toml",
+  "/README.md",
+  "/README.tr.md",
+  "/LICENSE",
+  "/CHANGELOG.md",
+]
