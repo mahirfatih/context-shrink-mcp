@@ -11,6 +11,10 @@ source .venv/bin/activate
 pip install -r requirements-dev.txt   # mcp + pytest + ruff + tiktoken
 ```
 
+The runtime dependency (`mcp`) alone is enough to run the server; it is pinned
+in `requirements.txt`. Optional local git hooks (Ruff + basic hygiene) live in
+`.pre-commit-config.yaml`: `pip install pre-commit && pre-commit install`.
+
 ## Running the checks
 
 ```bash
@@ -38,6 +42,10 @@ Add tests under `test/`. The server module is loaded by path (its filename is
 not a valid Python identifier), and each test gets a fresh module instance, so
 the lazily cached tokenizer resets automatically. Never call the network in a
 test — mock the tokenizer or the summariser endpoint instead.
+
+`context-shrink-tests.py` holds the unit tests and the shared fixtures;
+`context-shrink-mcp-tests.py` spawns the server and exercises the real STDIO
+transport (handshake, `tools/list`, one `tools/call`), still without the network.
 
 ### File names
 

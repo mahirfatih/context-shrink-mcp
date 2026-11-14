@@ -12,6 +12,7 @@ suite itself is described in the [README](../README.md#-testing--ci).
 | :--- | :--- |
 | [`test.sh`](./test.sh) | Single test runner. Installs dev deps, runs Ruff, then pytest. |
 | [`context-shrink-tests.py`](./context-shrink-tests.py) | Unit tests for the pure helpers and the tokenizer resolution logic; also defines the shared `shrink` fixture and the autouse heuristic token counter. |
+| [`context-shrink-mcp-tests.py`](./context-shrink-mcp-tests.py) | End-to-end test: spawns the server and drives a JSON-RPC handshake, `tools/list` and one `tools/call` over STDIO. No network. |
 
 ## Quick start
 

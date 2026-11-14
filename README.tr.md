@@ -384,6 +384,20 @@ CONTEXT_SHRINK_*  >  OMLX_SHRINK_* (eski)  >  OPENAI_SHRINK_*
 | `CONTEXT_SHRINK_TOKENIZER` / `OMLX_SHRINK_TOKENIZER` / `OPENAI_SHRINK_TOKENIZER` | `auto` | Token sayacı: `auto` (kuruluysa tiktoken `cl100k_base`, yoksa heuristic), bir tiktoken encoding adı veya her zaman karakter ÷ 4 için `heuristic`/`off` |
 | `CONTEXT_SHRINK_MAX_CONTEXT_TOKENS` / `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `32768` | Her araç çağrısı için varsayılan bağlam bütçesi |
 | `CONTEXT_SHRINK_EXTRA_HEADERS` / `OMLX_SHRINK_EXTRA_HEADERS` / `OPENAI_SHRINK_EXTRA_HEADERS` | *(boş)* | Azure OpenAI gibi ağ geçitleri için ek HTTP başlıkları, JSON nesnesi biçiminde (`{"api-key": "..."}`) |
+| `CONTEXT_SHRINK_LOG_LEVEL` / `OMLX_SHRINK_LOG_LEVEL` / `OPENAI_SHRINK_LOG_LEVEL` | `INFO` | stderr günlük seviyesi (sorun giderirken `DEBUG`); geçersiz ad `INFO`'ya düşer |
+
+### Sık yapılan hatalar
+
+- **Boş `CONTEXT_SHRINK_MODEL`** `compact_context`'i yalnızca plan moduna alır:
+  model çağırmak yerine bir `needs_summary` planı döner.
+- **Çok küçük `max_context_tokens`** her çağrıyı bütçe aşımı gibi gösterir; modele
+  gerçek bağlam penceresini verin (varsayılan `32768`).
+- **`*_EXTRA_HEADERS` bir JSON nesnesi olmalıdır** — string, dizi veya bozuk JSON
+  uyarıyla birlikte yok sayılır.
+- **Uzak/bulut `CONTEXT_SHRINK_BASE_URL`** mesajlarınızı o uç noktaya gönderir;
+  yalnızca güvendiğiniz bir sunucuyu gösterin.
+- Aralık dışı `max_context_tokens` değerleri `1…1000000` aralığına kırpılır, böylece
+  bir yazım hatası belleği tüketemez.
 
 ### 6. Kullanın
 
@@ -456,6 +470,19 @@ Sıkıştırma akışı, ajan modu (iki çağrı):
 `estimate_context` ayrıca kullanılan sayacı belirten bir `tokenizer` alanı döner
 (örneğin `tiktoken:cl100k_base` veya `heuristic(chars/4)`).
 
+### Minimal Python istemci
+
+[`examples/python-client.py`](./examples/python-client.py) çalıştırılabilir bir
+istemcidir: sunucuyu stdio üzerinden başlatır, araçları listeler ve
+`estimate_context` çağırır.
+
+```bash
+python examples/python-client.py                          # ./context-shrink.py kullanır
+python examples/python-client.py /yol/context-shrink.py
+```
+
+`mcp` kurulu olan aynı yorumlayıcıyla çalıştırın.
+
 ---
 
 ## 📂 Proje Yapısı
@@ -468,14 +495,19 @@ context-shrink-mcp/
 ├── CONTRIBUTING.md          # Kurulum, testler, commit kuralları
 ├── CHANGELOG.md             # Keep a Changelog sürüm notları
 ├── OPENAI-API-REFERENCE.md  # Uç nokta, başlıklar ve hata biçimleri
+├── requirements.txt         # Çalışma zamanı bağımlılığı (mcp)
 ├── requirements-dev.txt     # Geliştirme bağımlılıkları (mcp, pytest, ruff, tiktoken)
 ├── pytest.ini               # pytest yapılandırması (testpaths, python_files)
 ├── .ruff.toml               # Ruff lint yapılandırması
+├── .pre-commit-config.yaml  # Opsiyonel yerel git hook'ları
 ├── .github/workflows/ci.yml # CI: lint + derleme + testler
-├── test/                    # Test runner + pytest birim testleri
+├── test/                    # Test runner + pytest testleri
 │   ├── test.sh              # Tek test runner (ruff + pytest)
 │   ├── README.md            # Test klasörü kılavuzu
-│   └── context-shrink-tests.py # Saf yardımcılar + tokenizer çözümleme + fixture'lar
+│   ├── context-shrink-tests.py # Saf yardımcılar + tokenizer çözümleme + fixture'lar
+│   └── context-shrink-mcp-tests.py # STDIO uçtan uca tur
+├── examples/                # Çalıştırılabilir örnekler
+│   └── python-client.py     # Minimal MCP istemcisi: araçları listele + birini çağır
 ├── LICENSE                  # MIT
 └── .gitignore
 ```
@@ -492,7 +524,7 @@ context-shrink-mcp/
 ```
 
 - **Runner:** [`test/test.sh`](./test/test.sh) geliştirme bağımlılıklarını kurar, Ruff ve ardından pytest çalıştırır. Yorumlayıcı, varsa proje `.venv`'i, yoksa `python3`'tür.
-- **Paketler:** [`test/`](./test) saf yardımcıları (token tahmini, kırpma, sıkıştırma bölme ve parçalama) ve opsiyonel tokenizer çözümleme mantığını kapsar — ağ yok, MCP taşıması yok.
+- **Paketler:** [`test/context-shrink-tests.py`](./test/context-shrink-tests.py) saf yardımcıları (token tahmini, kırpma, sıkıştırma bölme ve parçalama), tokenizer çözümleme mantığını ve ortam değişkeni ayrıştırmayı kapsar — ağ yok. [`test/context-shrink-mcp-tests.py`](./test/context-shrink-mcp-tests.py) ise gerçek STDIO taşıması üzerinden uçtan uca bir tur ekler (el sıkışma → `tools/list` → `tools/call`).
 - **CI:** [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) Ruff, bir `py_compile` kontrolü ve `pytest` çalıştırır. **Yalnızca manuel** tetiklenir — Actions sekmesi → CI → Run workflow.
 
 Sunucuyu elle, bir istemci üzerinden çalıştırmak için:
@@ -511,6 +543,8 @@ python3 context-shrink.py   # stdio sunucusunu başlatır; durdurmak için Ctrl-
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — geliştirme kurulumu, testler ve commit kuralları.
 - [CHANGELOG.md](./CHANGELOG.md) — sürüm notları.
 - [OPENAI-API-REFERENCE.md](./OPENAI-API-REFERENCE.md) — sunucunun dayandığı uç nokta, başlıklar ve hata biçimleri.
+- [examples/python-client.py](./examples/python-client.py) — araçları listeleyip birini çağıran çalıştırılabilir bir MCP istemcisi.
+- [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) — bu dosyanın üzerine kurulduğu taşıma katmanı ve `MCPServer` API'si.
 
 ---
 

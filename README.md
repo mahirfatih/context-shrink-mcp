@@ -387,6 +387,20 @@ CONTEXT_SHRINK_*  >  OMLX_SHRINK_* (legacy)  >  OPENAI_SHRINK_*
 | `CONTEXT_SHRINK_TOKENIZER` / `OMLX_SHRINK_TOKENIZER` / `OPENAI_SHRINK_TOKENIZER` | `auto` | Token counter: `auto` (tiktoken `cl100k_base` if installed, else heuristic), a tiktoken encoding name, or `heuristic`/`off` to always use chars ÷ 4 |
 | `CONTEXT_SHRINK_MAX_CONTEXT_TOKENS` / `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `32768` | Default context budget for every tool call |
 | `CONTEXT_SHRINK_EXTRA_HEADERS` / `OMLX_SHRINK_EXTRA_HEADERS` / `OPENAI_SHRINK_EXTRA_HEADERS` | *(empty)* | Extra HTTP headers as a JSON object, for gateways such as Azure OpenAI (`{"api-key": "..."}`) |
+| `CONTEXT_SHRINK_LOG_LEVEL` / `OMLX_SHRINK_LOG_LEVEL` / `OPENAI_SHRINK_LOG_LEVEL` | `INFO` | stderr log level (use `DEBUG` when troubleshooting); an invalid name falls back to `INFO` |
+
+### Common pitfalls
+
+- An **empty `CONTEXT_SHRINK_MODEL`** puts `compact_context` into plan-only mode:
+  it returns a `needs_summary` plan instead of calling a model.
+- A **too-small `max_context_tokens`** makes every call look over-budget; set it
+  to the model's real context window (the default is `32768`).
+- **`*_EXTRA_HEADERS` must be a JSON object** — a string, array or malformed JSON
+  is ignored with a warning.
+- A **remote/cloud `CONTEXT_SHRINK_BASE_URL`** forwards your messages to that
+  endpoint; only point it at a server you trust.
+- Out-of-range `max_context_tokens` values are clamped to `1…1000000` so a typo
+  cannot exhaust memory.
 
 ### 6. Use it
 
@@ -460,6 +474,18 @@ Compaction flow, agent mode (two calls):
 `estimate_context` also returns a `tokenizer` field naming the counter in use
 (for example `tiktoken:cl100k_base` or `heuristic(chars/4)`).
 
+### Minimal Python client
+
+[`examples/python-client.py`](./examples/python-client.py) is a runnable client:
+it starts the server over stdio, lists its tools and calls `estimate_context`.
+
+```bash
+python examples/python-client.py                          # uses ./context-shrink.py
+python examples/python-client.py /path/to/context-shrink.py
+```
+
+Run it with the same interpreter that has `mcp` installed.
+
 ---
 
 ## 📂 Project Structure
@@ -472,14 +498,19 @@ context-shrink-mcp/
 ├── CONTRIBUTING.md          # Setup, tests, commit conventions
 ├── CHANGELOG.md             # Keep a Changelog release notes
 ├── OPENAI-API-REFERENCE.md  # Endpoint, headers and error shapes
+├── requirements.txt         # Runtime dependency (mcp)
 ├── requirements-dev.txt     # Dev dependencies (mcp, pytest, ruff, tiktoken)
 ├── pytest.ini               # pytest config (testpaths, python_files)
 ├── .ruff.toml               # Ruff lint configuration
+├── .pre-commit-config.yaml  # Optional local git hooks
 ├── .github/workflows/ci.yml # CI: lint + compile + tests
-├── test/                    # Test runner + pytest unit tests
+├── test/                    # Test runner + pytest tests
 │   ├── test.sh              # Single test runner (ruff + pytest)
 │   ├── README.md            # Test folder guide
-│   └── context-shrink-tests.py # Pure helpers + tokenizer resolution + fixtures
+│   ├── context-shrink-tests.py # Pure helpers + tokenizer resolution + fixtures
+│   └── context-shrink-mcp-tests.py # STDIO end-to-end round-trip
+├── examples/                # Runnable examples
+│   └── python-client.py     # Minimal MCP client: list tools + call one
 ├── LICENSE                  # MIT
 └── .gitignore
 ```
@@ -496,7 +527,7 @@ context-shrink-mcp/
 ```
 
 - **Runner:** [`test/test.sh`](./test/test.sh) installs the dev dependencies, runs Ruff, then pytest. The interpreter is the project `.venv` when present, otherwise `python3`.
-- **Suites:** [`test/`](./test) covers the pure helpers (token estimation, trimming, compaction splitting and chunking) plus the optional-tokenizer resolution logic — no network, no MCP transport.
+- **Suites:** [`test/context-shrink-tests.py`](./test/context-shrink-tests.py) covers the pure helpers (token estimation, trimming, compaction splitting and chunking), the tokenizer resolution logic and the env-var parsing — no network. [`test/context-shrink-mcp-tests.py`](./test/context-shrink-mcp-tests.py) adds an end-to-end round-trip over the real STDIO transport (handshake → `tools/list` → `tools/call`).
 - **CI:** [`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs Ruff, a `py_compile` check, and `pytest`. It is **manual only** — trigger it with `workflow_dispatch` (Actions tab → CI → Run workflow).
 
 Run the server by hand to exercise it through a client:
@@ -515,6 +546,8 @@ python3 context-shrink.py   # starts the stdio server; Ctrl-C to stop
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — development setup, tests, and commit conventions.
 - [CHANGELOG.md](./CHANGELOG.md) — release notes.
 - [OPENAI-API-REFERENCE.md](./OPENAI-API-REFERENCE.md) — the endpoint, headers and error shapes this server relies on.
+- [examples/python-client.py](./examples/python-client.py) — a runnable MCP client that lists the tools and calls one.
+- [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk) — the transport and `MCPServer` API this file is built on.
 
 ---
 

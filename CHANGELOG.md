@@ -34,6 +34,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Startup hardening: clear messages on missing/outdated `mcp` and Python < 3.10,
   UTF-8 stdio on Windows, tolerant parsing of invalid timeout values, clean exit
   on Ctrl-C / closed pipe.
+- `*_LOG_LEVEL` sets the stderr log level (default `INFO`); an invalid name falls
+  back to `INFO`.
+- Input hardening: out-of-range `max_context_tokens` is clamped to `1…1000000`,
+  `keep_last`/`summary_budget_tokens` to `>= 1`, `threshold` to `0…1`, and a
+  base URL that is not `http(s)` is logged as a warning.
+- End-to-end test over the real STDIO transport (`test/context-shrink-mcp-tests.py`):
+  handshake, `tools/list` and one `tools/call`.
+- `requirements.txt` pins the single runtime dependency (`mcp>=2.0,<3.0`); the
+  same bound is applied in `requirements-dev.txt`.
+- Optional `.pre-commit-config.yaml` (Ruff + basic hygiene hooks).
 
 ### Changed
 
@@ -54,3 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `summary_budget_tokens` and `summary_role`).
 - Added a migration guide to both READMEs for the rename (file path, tool
   namespace, repository and environment variables).
+- Added a "Common pitfalls" list, the `CONTEXT_SHRINK_LOG_LEVEL` variable and a
+  link to the MCP Python SDK to both READMEs.
+- Added `examples/python-client.py`, a runnable MCP client (list tools + call
+  one), linked from both READMEs.
