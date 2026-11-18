@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-11-15
+
+### Changed
+
+- The default `max_context_tokens` is now **65536** (was `32768`), matching the
+  widened oMLX context window. The `*_MAX_CONTEXT_TOKENS` environment variables
+  still override it; the tool names and the other defaults (`keep_last = 8`,
+  `threshold = 0.8`) are unchanged.
+
 ## [1.0.0]
 
 ### Added

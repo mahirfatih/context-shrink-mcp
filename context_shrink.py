@@ -25,7 +25,7 @@ names are accepted first, then the legacy ``OMLX_SHRINK_*`` ones, then the
 * ``*_TIMEOUT``       - request timeout in seconds (default 180)
 * ``*_TOKENIZER``     - ``auto`` (default), a tiktoken encoding name, or
   ``heuristic``/``off``/``none``/``chars``
-* ``*_MAX_CONTEXT_TOKENS`` - default context budget (default 32768)
+* ``*_MAX_CONTEXT_TOKENS`` - default context budget (default 65536)
 * ``*_EXTRA_HEADERS`` - extra HTTP headers as a JSON object, for gateways that
   need them (Azure OpenAI's ``api-key`` header, org ids, ...)
 * ``*_LOG_LEVEL`` - stderr log level name (default ``INFO``)
@@ -220,7 +220,7 @@ MAX_CONTEXT_TOKENS = _env_int(
     "CONTEXT_SHRINK_MAX_CONTEXT_TOKENS",
     "OMLX_SHRINK_MAX_CONTEXT_TOKENS",
     "OPENAI_SHRINK_MAX_CONTEXT_TOKENS",
-    default=32768,
+    default=65536,
 )
 DEFAULT_KEEP_LAST = 8
 DEFAULT_THRESHOLD = 0.8
@@ -500,7 +500,7 @@ def estimate_context(
 
         estimate_context({
             "messages": [{"role": "user", "content": "hello"}],
-            "max_context_tokens": 32768,
+            "max_context_tokens": 65536,
         })
     """
     max_context_tokens = _coerce_budget(max_context_tokens)
@@ -532,7 +532,7 @@ def trim_context(
         trim_context({
             "messages": [...],
             "keep_last": 8,
-            "max_context_tokens": 32768,
+            "max_context_tokens": 65536,
         })
     """
     max_context_tokens = _coerce_budget(max_context_tokens)

@@ -148,7 +148,7 @@ OpenAI uyumlu uç noktalar da çalışır.
 
 ## 📖 Genel Bakış
 
-Bu sınıftaki modeller için oMLX profilleri **32K bağlam** (`max_context_window: 32768`) ile çalışır. Bu bilinçli bir tercihtir: 4-bit KV önbelleğiyle çalışma zamanı ayak izini model başına yaklaşık 17–20 GB'ta tutar ve Apple Silicon'da prefill'i kısa tutar. Sınırı yükseltmek bedavadır değildir — bağlamdaki her ek token, bellekte ve prefill süresinde ödenir.
+Bu sınıftaki modeller için oMLX profilleri **64K bağlam** (`max_context_window: 65536`) ile çalışır. Bu bilinçli bir tercihtir: 4-bit KV önbelleğiyle çalışma zamanı ayak izini model başına yaklaşık 17–20 GB'ta tutar ve Apple Silicon'da prefill'i kısa tutar. Sınırı yükseltmek bedavadır değildir — bağlamdaki her ek token, bellekte ve prefill süresinde ödenir.
 
 Maliyet uzun bir oturumda ortaya çıkar. Toplam tavanı aşana kadar üç şey büyümeye devam eder:
 
@@ -170,9 +170,9 @@ Bu noktada ajan durur. Soruda yanlış bir şey yoktu — prompt yalnızca 6.7K 
 | Elle kırpmak | Manuel, unutması kolay, koca oturumları çöpe atar |
 | Yeni bir oturum başlatmak | Görevi çalıştıran bağlamı kaybeder |
 
-Bu yüzden sunucu ucuz yolu seçer: **32K'yı koru, daha küçük bir prompt gönder.**
+Bu yüzden sunucu ucuz yolu seçer: **64K'yı koru, daha küçük bir prompt gönder.**
 
-Tam anlatımı okuyun (neden 32K, üç sıkıştırma modu, ortam değişkenleri ve bilinen sınırlamalar):
+Tam anlatımı okuyun (neden 64K, üç sıkıştırma modu, ortam değişkenleri ve bilinen sınırlamalar):
 
 **[English →](./README.md)** · **[Türkçe →](./README.tr.md)**
 
@@ -195,7 +195,7 @@ Bağlam pencereniz oturumlarınız için yeterince büyükse ya da istemciniz ge
 - **Token Sayımı:** opsiyonel `tiktoken` (varsayılan `cl100k_base`), karakter tabanlı heuristic fallback — zorunlu bağımlılık yok
 - **Bağımlılıklar:** `mcp` (MCP SDK) zorunlu; `tiktoken` opsiyonel — GPU gerekmez
 - **Hedef Sunucu:** OpenAI uyumlu herhangi bir sunucu — bkz. [Uyumlu altyapılar](#-uyumlu-altyapılar)
-- **Varsayılanlar:** `max_context_tokens = 32768`, `keep_last = 8`, `threshold = 0.8`
+- **Varsayılanlar:** `max_context_tokens = 65536`, `keep_last = 8`, `threshold = 0.8`
 
 ---
 
@@ -373,7 +373,7 @@ Yapılandırma değişiklikleri yeniden başlatma gerektirmez — OpenCode yapı
 ### Gerçek kurulum (bu projenin geliştirme makinesi)
 
 Bu sunucu, Apple Silicon bir Mac'te yerel bir **oMLX** sunucusuyla geliştirildi ve
-her gün bu kurulumda kullanılıyor — hedeflediği 32K bağlam profili
+her gün bu kurulumda kullanılıyor — hedeflediği 64K bağlam profili
 [`mahirfatih/omlx-m1-max-benchmark`](https://github.com/mahirfatih/omlx-m1-max-benchmark)
 deposunda belgelenmiştir. Oradaki OpenCode girdisi, sunucuyu özel bir sanal ortam
 (virtualenv) üzerinden çalıştırır ve özetleyiciyi yerel modele yöneltir:
@@ -423,7 +423,7 @@ CONTEXT_SHRINK_*  >  OMLX_SHRINK_* (eski)  >  OPENAI_SHRINK_*
 | `CONTEXT_SHRINK_API_KEY` / `OMLX_SHRINK_API_KEY` / `OPENAI_SHRINK_API_KEY` | *(boş)* | Sunucu gerektiriyorsa Bearer token |
 | `CONTEXT_SHRINK_TIMEOUT` / `OMLX_SHRINK_TIMEOUT` / `OPENAI_SHRINK_TIMEOUT` | `180` | Özetleyici istek zaman aşımı, saniye (geçersiz değer 180'e düşer) |
 | `CONTEXT_SHRINK_TOKENIZER` / `OMLX_SHRINK_TOKENIZER` / `OPENAI_SHRINK_TOKENIZER` | `auto` | Token sayacı: `auto` (kuruluysa tiktoken `cl100k_base`, yoksa heuristic), bir tiktoken encoding adı veya her zaman karakter ÷ 4 için `heuristic`/`off` |
-| `CONTEXT_SHRINK_MAX_CONTEXT_TOKENS` / `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `32768` | Her araç çağrısı için varsayılan bağlam bütçesi |
+| `CONTEXT_SHRINK_MAX_CONTEXT_TOKENS` / `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `65536` | Her araç çağrısı için varsayılan bağlam bütçesi |
 | `CONTEXT_SHRINK_EXTRA_HEADERS` / `OMLX_SHRINK_EXTRA_HEADERS` / `OPENAI_SHRINK_EXTRA_HEADERS` | *(boş)* | Azure OpenAI gibi ağ geçitleri için ek HTTP başlıkları, JSON nesnesi biçiminde (`{"api-key": "..."}`) |
 | `CONTEXT_SHRINK_LOG_LEVEL` / `OMLX_SHRINK_LOG_LEVEL` / `OPENAI_SHRINK_LOG_LEVEL` | `INFO` | stderr günlük seviyesi (sorun giderirken `DEBUG`); geçersiz ad `INFO`'ya düşer |
 
@@ -432,7 +432,7 @@ CONTEXT_SHRINK_*  >  OMLX_SHRINK_* (eski)  >  OPENAI_SHRINK_*
 - **Boş `CONTEXT_SHRINK_MODEL`** `compact_context`'i yalnızca plan moduna alır:
   model çağırmak yerine bir `needs_summary` planı döner.
 - **Çok küçük `max_context_tokens`** her çağrıyı bütçe aşımı gibi gösterir; modele
-  gerçek bağlam penceresini verin (varsayılan `32768`).
+  gerçek bağlam penceresini verin (varsayılan `65536`).
 - **`*_EXTRA_HEADERS` bir JSON nesnesi olmalıdır** — string, dizi veya bozuk JSON
   uyarıyla birlikte yok sayılır.
 - **Uzak/bulut `CONTEXT_SHRINK_BASE_URL`** mesajlarınızı o uç noktaya gönderir;
@@ -456,7 +456,7 @@ CONTEXT_SHRINK_*  >  OMLX_SHRINK_* (eski)  >  OPENAI_SHRINK_*
     { "role": "assistant", "content": "ilk yanıt" },
     { "role": "user", "content": "ikinci mesaj" }
   ],
-  "max_context_tokens": 32768
+  "max_context_tokens": 65536
 }
 ```
 
@@ -466,7 +466,7 @@ CONTEXT_SHRINK_*  >  OMLX_SHRINK_* (eski)  >  OPENAI_SHRINK_*
 {
   "messages": [ "..." ],
   "keep_last": 8,
-  "max_context_tokens": 32768
+  "max_context_tokens": 65536
 }
 ```
 
@@ -494,11 +494,11 @@ Sıkıştırma akışı, ajan modu (iki çağrı):
 | Araç | Parametre | Varsayılan | Anlamı |
 | :--- | :--- | :--- | :--- |
 | *(hepsi)* | `messages` | *(zorunlu)* | `role` / `content` çiftlerinden oluşan konuşma |
-| `estimate_context` | `max_context_tokens` | `32768` | Tahminin karşılaştırılacağı bütçe |
+| `estimate_context` | `max_context_tokens` | `65536` | Tahminin karşılaştırılacağı bütçe |
 | `trim_context` | `keep_last` | `8` | Her zaman korunan en yeni mesaj sayısı |
-| `trim_context` | `max_context_tokens` | `32768` | Kırpılacak hedef bütçe |
+| `trim_context` | `max_context_tokens` | `65536` | Kırpılacak hedef bütçe |
 | `compact_context` | `keep_last` | `8` | Aynen korunan en yeni mesaj sayısı |
-| `compact_context` | `max_context_tokens` | `32768` | Bağlam bütçesi |
+| `compact_context` | `max_context_tokens` | `65536` | Bağlam bütçesi |
 | `compact_context` | `threshold` | `0.8` | Bütçenin bu oranının üzerinde sıkıştır (aksi hâlde `force` gerekir) |
 | `compact_context` | `force` | `false` | `threshold` altında olsa bile sıkıştır |
 | `compact_context` | `summary` | *(yok)* | Hazır özet (mod 1) |
@@ -616,7 +616,7 @@ python3 context_shrink.py   # stdio sunucusunu başlatır; durdurmak için Ctrl-
 
 ## 📝 Notlar
 
-- Varsayılan bağlam sınırı: `32768` token — profilinize göre değiştirin.
+- Varsayılan bağlam sınırı: `65536` token — profilinize göre değiştirin.
 - Kırpma politikası: önce en eski mesajlar; son `keep_last` mesaj her zaman korunur.
 - Sıkıştırma politikası: baştaki `system` mesajları korunur, geri kalanların en eskileri özeti taşıyan tek bir `system` mesajıyla değiştirilir ve son `keep_last` mesaj aynen korunur.
 - Araç yüzeyi sade MCP'dir; yani yalnızca OpenCode değil, herhangi bir MCP istemcisi sunucuyu kullanabilir.
@@ -634,7 +634,7 @@ ad alanı, depo ve ortam değişkeni eşlemesi
 
 ## 🔗 Arka Plan
 
-Bu sunucunun ele aldığı 32K profili ve `Prompt is too long` hatası [`mahirfatih/omlx-m1-max-benchmark`](https://github.com/mahirfatih/omlx-m1-max-benchmark) deposunda belgelenmiştir: `docs/reference/PROFILES.md` bağlam penceresinin neden 32K olduğunu açıklar, README ise bu sunucu için öneri bölümünü içerir.
+Bu sunucunun ele aldığı 64K profili ve `Prompt is too long` hatası [`mahirfatih/omlx-m1-max-benchmark`](https://github.com/mahirfatih/omlx-m1-max-benchmark) deposunda belgelenmiştir: `docs/reference/PROFILES.md` bağlam penceresinin neden 64K olduğunu açıklar, README ise bu sunucu için öneri bölümünü içerir.
 
 ---
 

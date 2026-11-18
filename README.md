@@ -148,7 +148,7 @@ OpenAI-compatible endpoints work too.
 
 ## 📖 Overview
 
-oMLX profiles for this class of models run **32K context** (`max_context_window: 32768`). That is a deliberate choice: with a 4-bit KV cache it keeps the runtime footprint at roughly 17–20 GB per model and keeps prefill short on Apple Silicon. Raising the limit is not free — every extra token of context is paid for in memory and prefill time.
+oMLX profiles for this class of models run **64K context** (`max_context_window: 65536`). That is a deliberate choice: with a 4-bit KV cache it keeps the runtime footprint at roughly 17–20 GB per model and keeps prefill short on Apple Silicon. Raising the limit is not free — every extra token of context is paid for in memory and prefill time.
 
 The cost appears in a long session. Three things keep growing until the total
 crosses the ceiling:
@@ -171,9 +171,9 @@ At that point the agent stops. Nothing was wrong with the question — the promp
 | Truncate by hand | Manual, easy to forget, throws away whole sessions |
 | Start a new session | Loses the context that made the task work in the first place |
 
-So this server takes the cheap path: **keep 32K, send a smaller prompt.**
+So this server takes the cheap path: **keep 64K, send a smaller prompt.**
 
-Read the full walkthrough (why 32K, the three compaction modes, the environment configuration, and the known limitations):
+Read the full walkthrough (why 64K, the three compaction modes, the environment configuration, and the known limitations):
 
 **[English →](./README.md)** · **[Türkçe →](./README.tr.md)**
 
@@ -196,7 +196,7 @@ You probably do not need it if your context window is large enough for your sess
 - **Token Counting:** optional `tiktoken` (default `cl100k_base`) with a character heuristic fallback — no hard dependency
 - **Dependencies:** `mcp` (MCP SDK) required; `tiktoken` optional — no GPU
 - **Target Server:** any OpenAI-compatible server — see [Compatible backends](#-compatible-backends)
-- **Defaults:** `max_context_tokens = 32768`, `keep_last = 8`, `threshold = 0.8`
+- **Defaults:** `max_context_tokens = 65536`, `keep_last = 8`, `threshold = 0.8`
 
 ---
 
@@ -375,7 +375,7 @@ Set the environment variables under `environment` in the MCP entry so `compact_c
 ### A real setup (this project's development machine)
 
 This server was written for, and is used daily on, an Apple Silicon Mac driving a
-local **oMLX** server — the 32K context profile it targets is documented in
+local **oMLX** server — the 64K context profile it targets is documented in
 [`mahirfatih/omlx-m1-max-benchmark`](https://github.com/mahirfatih/omlx-m1-max-benchmark).
 The OpenCode entry used there runs the server from a dedicated virtualenv and
 points the summariser at the local model:
@@ -426,7 +426,7 @@ CONTEXT_SHRINK_*  >  OMLX_SHRINK_* (legacy)  >  OPENAI_SHRINK_*
 | `CONTEXT_SHRINK_API_KEY` / `OMLX_SHRINK_API_KEY` / `OPENAI_SHRINK_API_KEY` | *(empty)* | Bearer token, if the server needs one |
 | `CONTEXT_SHRINK_TIMEOUT` / `OMLX_SHRINK_TIMEOUT` / `OPENAI_SHRINK_TIMEOUT` | `180` | Summariser request timeout, seconds (invalid values fall back to 180) |
 | `CONTEXT_SHRINK_TOKENIZER` / `OMLX_SHRINK_TOKENIZER` / `OPENAI_SHRINK_TOKENIZER` | `auto` | Token counter: `auto` (tiktoken `cl100k_base` if installed, else heuristic), a tiktoken encoding name, or `heuristic`/`off` to always use chars ÷ 4 |
-| `CONTEXT_SHRINK_MAX_CONTEXT_TOKENS` / `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `32768` | Default context budget for every tool call |
+| `CONTEXT_SHRINK_MAX_CONTEXT_TOKENS` / `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `65536` | Default context budget for every tool call |
 | `CONTEXT_SHRINK_EXTRA_HEADERS` / `OMLX_SHRINK_EXTRA_HEADERS` / `OPENAI_SHRINK_EXTRA_HEADERS` | *(empty)* | Extra HTTP headers as a JSON object, for gateways such as Azure OpenAI (`{"api-key": "..."}`) |
 | `CONTEXT_SHRINK_LOG_LEVEL` / `OMLX_SHRINK_LOG_LEVEL` / `OPENAI_SHRINK_LOG_LEVEL` | `INFO` | stderr log level (use `DEBUG` when troubleshooting); an invalid name falls back to `INFO` |
 
@@ -435,7 +435,7 @@ CONTEXT_SHRINK_*  >  OMLX_SHRINK_* (legacy)  >  OPENAI_SHRINK_*
 - An **empty `CONTEXT_SHRINK_MODEL`** puts `compact_context` into plan-only mode:
   it returns a `needs_summary` plan instead of calling a model.
 - A **too-small `max_context_tokens`** makes every call look over-budget; set it
-  to the model's real context window (the default is `32768`).
+  to the model's real context window (the default is `65536`).
 - **`*_EXTRA_HEADERS` must be a JSON object** — a string, array or malformed JSON
   is ignored with a warning.
 - A **remote/cloud `CONTEXT_SHRINK_BASE_URL`** forwards your messages to that
@@ -460,7 +460,7 @@ Example `estimate_context` call:
     { "role": "assistant", "content": "first answer" },
     { "role": "user", "content": "second message" }
   ],
-  "max_context_tokens": 32768
+  "max_context_tokens": 65536
 }
 ```
 
@@ -470,7 +470,7 @@ Example `trim_context` call:
 {
   "messages": [ "..." ],
   "keep_last": 8,
-  "max_context_tokens": 32768
+  "max_context_tokens": 65536
 }
 ```
 
@@ -498,11 +498,11 @@ Compaction flow, agent mode (two calls):
 | Tool | Parameter | Default | Meaning |
 | :--- | :--- | :--- | :--- |
 | *(all)* | `messages` | *(required)* | Conversation as `role` / `content` pairs |
-| `estimate_context` | `max_context_tokens` | `32768` | Budget to compare the estimate against |
+| `estimate_context` | `max_context_tokens` | `65536` | Budget to compare the estimate against |
 | `trim_context` | `keep_last` | `8` | Newest messages always kept |
-| `trim_context` | `max_context_tokens` | `32768` | Budget to trim down to |
+| `trim_context` | `max_context_tokens` | `65536` | Budget to trim down to |
 | `compact_context` | `keep_last` | `8` | Newest messages kept verbatim |
-| `compact_context` | `max_context_tokens` | `32768` | Context budget |
+| `compact_context` | `max_context_tokens` | `65536` | Context budget |
 | `compact_context` | `threshold` | `0.8` | Compact only above this fraction of the budget (unless `force`) |
 | `compact_context` | `force` | `false` | Compact even when under `threshold` |
 | `compact_context` | `summary` | *(none)* | Pre-written summary (mode 1) |
@@ -619,7 +619,7 @@ python3 context_shrink.py   # starts the stdio server; Ctrl-C to stop
 
 ## 📝 Notes
 
-- Default context limit: `32768` tokens — change it to match your profile.
+- Default context limit: `65536` tokens — change it to match your profile.
 - Trim policy: oldest messages first; the last `keep_last` messages are always kept.
 - Compact policy: leading `system` messages are kept, the oldest of the rest are replaced by one `system` message holding the summary, and the last `keep_last` messages are kept verbatim.
 - The tool surface is plain MCP, so any MCP client can use the server, not just OpenCode.
@@ -637,7 +637,7 @@ mapping is in [`docs/guides/MIGRATION.md`](./docs/guides/MIGRATION.md).
 
 ## 🔗 Background
 
-The 32K profile and the `Prompt is too long` failure this server addresses are documented in [`mahirfatih/omlx-m1-max-benchmark`](https://github.com/mahirfatih/omlx-m1-max-benchmark): `docs/reference/PROFILES.md` explains why the context window is set to 32K, and the README has the recommendation section for this server.
+The 64K profile and the `Prompt is too long` failure this server addresses are documented in [`mahirfatih/omlx-m1-max-benchmark`](https://github.com/mahirfatih/omlx-m1-max-benchmark): `docs/reference/PROFILES.md` explains why the context window is set to 64K, and the README has the recommendation section for this server.
 
 ---
 
