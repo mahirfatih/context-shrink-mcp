@@ -2,8 +2,8 @@
 
 How a Context Shrink release is cut. The package name is **`context-shrink-mcp`**
 and installing it exposes the **`context-shrink`** console script. Everything is
-built from `pyproject.toml`; the implementation is the single module
-`context_shrink.py`.
+built from `pyproject.toml`; the implementation is the single file
+`context-shrink.py`.
 
 ## 1. Bump the version
 

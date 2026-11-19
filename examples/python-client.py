@@ -3,7 +3,7 @@
 Starts the server over stdio, lists its tools and calls one of them. Run it with
 the same interpreter that has ``mcp`` installed:
 
-    python examples/python-client.py [path/to/context_shrink.py]
+    python examples/python-client.py [path/to/context-shrink.py]
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ from pathlib import Path
 from mcp import Client
 from mcp.client.stdio import StdioServerParameters
 
-DEFAULT_SERVER = Path(__file__).resolve().parents[1] / "context_shrink.py"
+DEFAULT_SERVER = Path(__file__).resolve().parents[1] / "context-shrink.py"
 
 
 async def main(server_file: str) -> None:

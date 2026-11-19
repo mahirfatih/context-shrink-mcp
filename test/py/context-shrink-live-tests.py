@@ -30,7 +30,7 @@ from types import ModuleType
 
 import pytest
 
-MODULE_PATH = Path(__file__).resolve().parents[2] / "context_shrink.py"
+MODULE_PATH = Path(__file__).resolve().parents[2] / "context-shrink.py"
 
 BASE_URL = os.environ.get("CONTEXT_SHRINK_BASE_URL", "http://127.0.0.1:8000/v1")
 API_KEY = os.environ.get("CONTEXT_SHRINK_API_KEY", "")

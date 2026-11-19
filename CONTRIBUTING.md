@@ -28,7 +28,7 @@ The runner and both checks run in CI (`.github/workflows/ci.yml`). CI is
 
 ## The server
 
-Everything ships in a single module, `context_shrink.py`. Keep it that way:
+Everything ships in a single file, `context-shrink.py`. Keep it that way:
 
 - Standard library only at runtime, except the required `mcp` SDK.
 - `tiktoken` must stay **optional** — import it defensively and fall back to the
@@ -36,10 +36,10 @@ Everything ships in a single module, `context_shrink.py`. Keep it that way:
 - New behaviour belongs in a pure helper (easy to unit-test) with the MCP tool
   acting as a thin JSON wrapper.
 
-The importable module is what `pyproject.toml` packages and what the
-`context-shrink` console script calls. The hyphenated `context-shrink.py` at the
-root is only a four-line shim that runs the same module for existing setups; keep
-it in sync by changing nothing but the module.
+There is **one file**, `context-shrink.py`. Python cannot import a hyphenated
+name, so the build renames it to `context_shrink.py` inside the wheel (see
+`[tool.hatch.build.targets.wheel]` in `pyproject.toml`) — that is the module the
+`context-shrink` console script calls. Keep the repository to the single file.
 
 ## Tests
 
@@ -94,7 +94,7 @@ If you run the server from OpenCode, keep the deployed copy in step with the
 repository (for example by copying or symlinking the file):
 
 ```bash
-cp context_shrink.py ~/.config/opencode/mcp/context_shrink.py
+cp context-shrink.py ~/.config/opencode/mcp/context-shrink.py
 ```
 
 OpenCode reloads MCP servers when configuration changes; run `/reload` in the TUI

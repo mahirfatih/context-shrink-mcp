@@ -19,7 +19,7 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Compile check
-        run: python -m py_compile context_shrink.py context-shrink.py
+        run: python -m py_compile context-shrink.py
 
       - name: Lint & test
         run: ./test/test.sh --no-install

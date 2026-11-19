@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `--max-context N` command-line flag, so the default context window can be set
   in the client's `command` array (for example
-  `["python3", "context_shrink.py", "--max-context", "65536"]`) instead of an
+  `["python3", "context-shrink.py", "--max-context", "65536"]`) instead of an
   environment variable.
 - `describe_config` tool: reports the resolved `max_context_tokens` and its
   source (`cli`, `env` or `default`), the tokenizer, and the policy defaults. It
@@ -28,6 +28,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The tool names and the other defaults (`keep_last = 8`, `threshold = 0.8`) are
   unchanged.
+
+- The server is now a **single file, `context-shrink.py`**. The separate
+  `context_shrink.py` module and the compatibility shim are gone; the packaged
+  wheel still installs the module as `context_shrink` internally, because Python
+  cannot import a hyphenated name, so the `context-shrink` console script keeps
+  working.
 
 ## [1.0.0]
 

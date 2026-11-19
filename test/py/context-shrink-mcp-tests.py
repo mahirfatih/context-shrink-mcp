@@ -1,7 +1,7 @@
 """End-to-end test over the real MCP stdio transport.
 
 The unit suite imports the server module directly. This file instead launches
-``context_shrink.py`` as a subprocess and speaks JSON-RPC to it on stdin/stdout,
+``context-shrink.py`` as a subprocess and speaks JSON-RPC to it on stdin/stdout,
 so the handshake, ``tools/list`` and one ``tools/call`` are exercised on the
 actual wire path. It still never touches the network: only ``estimate_context``
 is called, which is pure arithmetic.
@@ -17,7 +17,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-MODULE_PATH = Path(__file__).resolve().parents[2] / "context_shrink.py"
+MODULE_PATH = Path(__file__).resolve().parents[2] / "context-shrink.py"
 _TIMEOUT_SECONDS = 15
 
 

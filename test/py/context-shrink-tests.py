@@ -15,7 +15,7 @@ from types import ModuleType
 
 import pytest
 
-MODULE_PATH = Path(__file__).resolve().parents[2] / "context_shrink.py"
+MODULE_PATH = Path(__file__).resolve().parents[2] / "context-shrink.py"
 
 
 def _load_module() -> ModuleType:

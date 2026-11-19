@@ -327,7 +327,7 @@ pip install "mcp>=2.0"
 
 ### 3. Sunucuyu kopyalayın
 
-`context_shrink.py` dosyasını seçtiğiniz bir dizine kopyalayın (örneğin `~/.config/opencode/mcp/`). Depo (checkout), kısa çizgili ada işaret eden mevcut kurulumlar için aynı modülü çalıştıran dört satırlık bir `context-shrink.py` shim'i de içerir.
+`context-shrink.py` dosyasını seçtiğiniz bir dizine kopyalayın (örneğin `~/.config/opencode/mcp/`). Tek, kendi kendine yeten bir dosyadır — kurulacak bir paket ya da senkron tutulacak ikinci bir modül yoktur.
 
 > **Not:** `command` dizisindeki `python3` beklediğiniz yorumlayıcı olmayabilir —
 > kurulumunuza göre `/opt/homebrew/bin/python3`, `/usr/bin/python3` veya başka bir
@@ -346,7 +346,7 @@ Sunucuyu OpenCode yapılandırmanıza (`~/.config/opencode/opencode.jsonc`) ekle
         "type": "local",
         "command": [
           "python3",
-          "/absolute/path/to/context_shrink.py"
+          "/absolute/path/to/context-shrink.py"
         ],
         "timeout": 180000
       }
@@ -378,7 +378,7 @@ Ayarlamanın iki yolu da aynı OpenCode girdisinde durur — birini seçin.
 ```jsonc
 "command": [
   "python3",
-  "/absolute/path/to/context_shrink.py",
+  "/absolute/path/to/context-shrink.py",
   "--max-context", "65536"
 ]
 ```
@@ -461,7 +461,7 @@ sağlayıcı girdisinden sapmasını engeller ve özetleyiciyi yerel modele yön
         "type": "local",
         "command": [
           "/absolute/path/to/context-shrink-venv/bin/python",
-          "/absolute/path/to/context_shrink.py",
+          "/absolute/path/to/context-shrink.py",
           "--max-context", "65536"
         ],
         "environment": {
@@ -604,8 +604,8 @@ her biri sunucuyu stdio üzerinden başlatır, araçları listeler ve
 `estimate_context` çağırır.
 
 ```bash
-python examples/python-client.py                          # ./context_shrink.py kullanır
-python examples/python-client.py /yol/context_shrink.py
+python examples/python-client.py                          # ./context-shrink.py kullanır
+python examples/python-client.py /yol/context-shrink.py
 
 cd examples && npm install && node js-client.js           # aynı istemcinin Node sürümü
 ```
@@ -619,8 +619,7 @@ Node 18+ ve bir kez `npm install` gerektirir.
 
 ```
 context-shrink-mcp/
-├── context_shrink.py        # Tek dosyalık MCP sunucusu (ürünün tamamı)
-├── context-shrink.py        # Yukarıdaki modülü çalıştıran dört satırlık shim
+├── context-shrink.py        # Tek dosyalık MCP sunucusu (ürünün tamamı)
 ├── pyproject.toml           # Paketleme + `context-shrink` konsol betiği
 ├── README.md                # İngilizce hızlı tur
 ├── README.tr.md             # Türkçe hızlı tur
@@ -674,7 +673,7 @@ context-shrink-mcp/
 Sunucuyu elle, bir istemci üzerinden çalıştırmak için:
 
 ```bash
-python3 context_shrink.py   # stdio sunucusunu başlatır; durdurmak için Ctrl-C
+python3 context-shrink.py   # stdio sunucusunu başlatır; durdurmak için Ctrl-C
 ```
 
 ---
@@ -683,7 +682,7 @@ python3 context_shrink.py   # stdio sunucusunu başlatır; durdurmak için Ctrl-
 
 - [README.md](./README.md) — İngilizce sürüm.
 - [README.tr.md](./README.tr.md) — bu dosya.
-- [context_shrink.py](./context_shrink.py) — araç şemaları ve davranışın kaynağı.
+- [context-shrink.py](./context-shrink.py) — araç şemaları ve davranışın kaynağı.
 - [pyproject.toml](./pyproject.toml) — paketleme ve `context-shrink` konsol betiği.
 - [pypi.org/project/context-shrink-mcp](https://pypi.org/project/context-shrink-mcp/) — yayınlanan paket.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — geliştirme kurulumu, testler ve commit kuralları.

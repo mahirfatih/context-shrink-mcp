@@ -329,7 +329,7 @@ pip install "mcp>=2.0"
 
 ### 3. Copy the server
 
-Copy `context_shrink.py` into a directory of your choice (for example `~/.config/opencode/mcp/`). A repository checkout also ships a four-line `context-shrink.py` shim that runs the same module, kept for existing setups that point at the hyphenated name.
+Copy `context-shrink.py` into a directory of your choice (for example `~/.config/opencode/mcp/`). It is a single self-contained file — there is no package to install and no second module to keep in sync.
 
 > **Note:** The `python3` in the `command` array may not be the one you expect —
 > depending on your setup it could be `/opt/homebrew/bin/python3`, `/usr/bin/python3`,
@@ -348,7 +348,7 @@ Add the server to your OpenCode config (`~/.config/opencode/opencode.jsonc`):
         "type": "local",
         "command": [
           "python3",
-          "/absolute/path/to/context_shrink.py"
+          "/absolute/path/to/context-shrink.py"
         ],
         "timeout": 180000
       }
@@ -380,7 +380,7 @@ Both ways to set it live in the same OpenCode entry — pick one.
 ```jsonc
 "command": [
   "python3",
-  "/absolute/path/to/context_shrink.py",
+  "/absolute/path/to/context-shrink.py",
   "--max-context", "65536"
 ]
 ```
@@ -463,7 +463,7 @@ from the provider block, and points the summariser at the local model:
         "type": "local",
         "command": [
           "/absolute/path/to/context-shrink-venv/bin/python",
-          "/absolute/path/to/context_shrink.py",
+          "/absolute/path/to/context-shrink.py",
           "--max-context", "65536"
         ],
         "environment": {
@@ -607,8 +607,8 @@ Compaction flow, agent mode (two calls):
 starts the server over stdio, lists its tools and calls `estimate_context`.
 
 ```bash
-python examples/python-client.py                          # uses ./context_shrink.py
-python examples/python-client.py /path/to/context_shrink.py
+python examples/python-client.py                          # uses ./context-shrink.py
+python examples/python-client.py /path/to/context-shrink.py
 
 cd examples && npm install && node js-client.js           # same client in Node
 ```
@@ -622,8 +622,7 @@ Node client needs Node 18+ and `npm install` once.
 
 ```
 context-shrink-mcp/
-├── context_shrink.py        # Single-file MCP server (the whole product)
-├── context-shrink.py        # Four-line shim that runs the module above
+├── context-shrink.py        # Single-file MCP server (the whole product)
 ├── pyproject.toml           # Packaging + the `context-shrink` console script
 ├── README.md                # English quick tour
 ├── README.tr.md             # Turkish quick tour
@@ -677,7 +676,7 @@ context-shrink-mcp/
 Run the server by hand to exercise it through a client:
 
 ```bash
-python3 context_shrink.py   # starts the stdio server; Ctrl-C to stop
+python3 context-shrink.py   # starts the stdio server; Ctrl-C to stop
 ```
 
 ---
@@ -686,7 +685,7 @@ python3 context_shrink.py   # starts the stdio server; Ctrl-C to stop
 
 - [README.md](./README.md) — this file.
 - [README.tr.md](./README.tr.md) — Turkish translation.
-- [context_shrink.py](./context_shrink.py) — source of truth for tool schemas and behaviour.
+- [context-shrink.py](./context-shrink.py) — source of truth for tool schemas and behaviour.
 - [pyproject.toml](./pyproject.toml) — packaging and the `context-shrink` console script.
 - [pypi.org/project/context-shrink-mcp](https://pypi.org/project/context-shrink-mcp/) — the published package.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) — development setup, tests, and commit conventions.
