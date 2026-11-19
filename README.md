@@ -415,8 +415,45 @@ Set the environment variables under `environment` in the MCP entry so `compact_c
 This server was written for, and is used daily on, an Apple Silicon Mac driving a
 local **oMLX** server — the 64K context profile it targets is documented in
 [`mahirfatih/omlx-m1-max-benchmark`](https://github.com/mahirfatih/omlx-m1-max-benchmark).
-The OpenCode entry used there runs the server from a dedicated virtualenv and
-points the summariser at the local model:
+On that machine OpenCode both **drives** the model and **runs** this server, so
+two entries have to agree: the provider (the window OpenCode itself assumes) and
+the MCP server (the window this server trims to).
+
+**The provider — tell OpenCode the model's real window.** OpenCode plans its own
+auto-compaction from `limit.context` and leaves reply head-room with
+`limit.output`. Both must match the oMLX profile, or OpenCode misses the window in
+one direction or the other:
+
+```jsonc
+{
+  "provider": {
+    "omlx": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "oMLX (local)",
+      "options": {
+        "baseURL": "http://127.0.0.1:8000/v1",
+        "apiKey": "omlx-..."
+      },
+      "models": {
+        "Qwen3.6-35B-A3B-4bit": {
+          "name": "Qwen3.6-35B-A3B-4bit",
+          "limit": { "context": 65536, "output": 4096 }
+        }
+      }
+    }
+  }
+}
+```
+
+- `limit.context: 65536` — the window OpenCode assumes. It must equal the oMLX
+  `max_context_window`: a smaller value compacts too early, a larger one hands
+  oMLX a prompt it answers with `Prompt is too long`.
+- `limit.output: 4096` — the head-room OpenCode keeps for the reply when it
+  decides the prompt is too big; it must not exceed the server's `max_tokens`.
+
+**The MCP server — trim to the same number.** The entry runs the server from a
+dedicated virtualenv, pins the window with `--max-context` so it cannot drift
+from the provider block, and points the summariser at the local model:
 
 ```jsonc
 {
@@ -426,7 +463,8 @@ points the summariser at the local model:
         "type": "local",
         "command": [
           "/absolute/path/to/context-shrink-venv/bin/python",
-          "/absolute/path/to/context_shrink.py"
+          "/absolute/path/to/context_shrink.py",
+          "--max-context", "65536"
         ],
         "environment": {
           "CONTEXT_SHRINK_MODEL": "Qwen3.6-35B-A3B-4bit",
@@ -440,6 +478,11 @@ points the summariser at the local model:
   }
 }
 ```
+
+Keep the two numbers equal: `limit.context` in the provider block and
+`--max-context` here. Without either, the server falls back to its built-in
+`32768` (see [Context window](#context-window--the-one-setting-most-people-change));
+`describe_config` prints what it actually resolved and from where.
 
 > The `CONTEXT_SHRINK_API_KEY` is the token the local oMLX server expects; it is
 > redacted here. Replace the paths and the key with your own.

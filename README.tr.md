@@ -413,8 +413,45 @@ Ayarlamanın iki yolu da aynı OpenCode girdisinde durur — birini seçin.
 Bu sunucu, Apple Silicon bir Mac'te yerel bir **oMLX** sunucusuyla geliştirildi ve
 her gün bu kurulumda kullanılıyor — hedeflediği 64K bağlam profili
 [`mahirfatih/omlx-m1-max-benchmark`](https://github.com/mahirfatih/omlx-m1-max-benchmark)
-deposunda belgelenmiştir. Oradaki OpenCode girdisi, sunucuyu özel bir sanal ortam
-(virtualenv) üzerinden çalıştırır ve özetleyiciyi yerel modele yöneltir:
+deposunda belgelenmiştir. O makinede OpenCode hem modeli **sürer** hem bu sunucuyu
+**çalıştırır**, yani iki girdinin anlaşması gerekir: sağlayıcı (OpenCode'un
+varsaydığı pencere) ve MCP sunucusu (bu sunucunun kırptığı pencere).
+
+**Sağlayıcı — OpenCode'a modelin gerçek penceresini söyleyin.** OpenCode kendi
+otomatik sıkıştırmasını `limit.context`'e göre planlar, yanıt için de
+`limit.output` kadar yer ayırır. İkisi de oMLX profiliyle eşleşmelidir; yoksa
+OpenCode pencereyi bir yönde şaşırır:
+
+```jsonc
+{
+  "provider": {
+    "omlx": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "oMLX (local)",
+      "options": {
+        "baseURL": "http://127.0.0.1:8000/v1",
+        "apiKey": "omlx-..."
+      },
+      "models": {
+        "Qwen3.6-35B-A3B-4bit": {
+          "name": "Qwen3.6-35B-A3B-4bit",
+          "limit": { "context": 65536, "output": 4096 }
+        }
+      }
+    }
+  }
+}
+```
+
+- `limit.context: 65536` — OpenCode'un varsaydığı pencere. oMLX
+  `max_context_window` değerine eşit olmalı: küçükse çok erken sıkıştırır,
+  büyükse oMLX'e `Prompt is too long` ile reddedeceği bir prompt verir.
+- `limit.output: 4096` — prompt fazla büyük olduğunda OpenCode'un yanıt için
+  ayırdığı pay; sunucunun `max_tokens` değerini aşmamalıdır.
+
+**MCP sunucusu — aynı sayıya kırpın.** Girdi, sunucuyu özel bir sanal ortam
+(virtualenv) üzerinden çalıştırır, pencereyi `--max-context` ile sabitleyerek
+sağlayıcı girdisinden sapmasını engeller ve özetleyiciyi yerel modele yöneltir:
 
 ```jsonc
 {
@@ -424,7 +461,8 @@ deposunda belgelenmiştir. Oradaki OpenCode girdisi, sunucuyu özel bir sanal or
         "type": "local",
         "command": [
           "/absolute/path/to/context-shrink-venv/bin/python",
-          "/absolute/path/to/context_shrink.py"
+          "/absolute/path/to/context_shrink.py",
+          "--max-context", "65536"
         ],
         "environment": {
           "CONTEXT_SHRINK_MODEL": "Qwen3.6-35B-A3B-4bit",
@@ -438,6 +476,11 @@ deposunda belgelenmiştir. Oradaki OpenCode girdisi, sunucuyu özel bir sanal or
   }
 }
 ```
+
+İki sayıyı eşit tutun: sağlayıcıdaki `limit.context` ve buradaki `--max-context`.
+İkisi de yoksa sunucu yerleşik `32768`'e düşer (bkz.
+[Bağlam penceresi](#bağlam-penceresi--çoğu-kişinin-değiştirdiği-tek-ayar));
+`describe_config` gerçekte neyin, nereden çözüldüğünü yazdırır.
 
 > `CONTEXT_SHRINK_API_KEY`, yerel oMLX sunucusunun beklediği token'dır; burada
 > sansürlenmiştir. Yolları ve anahtarı kendi değerlerinizle değiştirin.
