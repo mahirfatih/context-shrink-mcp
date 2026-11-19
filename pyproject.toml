@@ -38,9 +38,10 @@ Issues = "https://github.com/mahirfatih/context-shrink-mcp/issues"
 context-shrink = "context_shrink:main"
 
 [tool.hatch.build.targets.wheel]
-# The repository file is ``context-shrink.py``; Python cannot import a
-# hyphenated name, so the wheel ships it as ``context_shrink.py`` (the module
-# the ``context-shrink`` console script calls).
+# The repository file is ``context-shrink.py``. Python import names cannot
+# contain a hyphen, so the wheel ships it as ``context_shrink.py`` — the module
+# name PEP 8 allows (underscores are permitted in module names when they improve
+# readability) and the module the ``context-shrink`` console script calls.
 force-include = { "context-shrink.py" = "context_shrink.py" }
 
 [tool.hatch.build.targets.sdist]

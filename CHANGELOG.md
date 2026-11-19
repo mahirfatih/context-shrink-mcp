@@ -31,9 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The server is now a **single file, `context-shrink.py`**. The separate
   `context_shrink.py` module and the compatibility shim are gone; the packaged
-  wheel still installs the module as `context_shrink` internally, because Python
-  cannot import a hyphenated name, so the `context-shrink` console script keeps
-  working.
+  wheel still installs one module, named `context_shrink` (PEP 8 permits
+  underscores in module names for readability, and Python import names cannot
+  contain a hyphen), so the `context-shrink` console script keeps working.
 
 ## [1.0.0]
 
