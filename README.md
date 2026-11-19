@@ -292,8 +292,8 @@ opencode mcp add context-shrink --global -- uvx --from git+https://github.com/ma
 ```
 
 `uvx` resolves the `mcp` dependency in an isolated environment and runs the
-server over stdio. Pin a version with `context-shrink-mcp@1.0.0` (PyPI) or
-`…context-shrink-mcp@v1.0.0` (GitHub).
+server over stdio. Pin a version with `context-shrink-mcp@1.1.0` (PyPI) or
+`…context-shrink-mcp@v1.1.0` (GitHub).
 
 Enable model mode on the same command:
 
@@ -737,7 +737,7 @@ The 64K profile and the `Prompt is too long` failure this server addresses are d
 
 > **Privacy:** The server makes **no network requests** of its own except the optional summariser call to the local OpenAI-compatible endpoint you configure. No telemetry, no analytics, no data leaves the machine. All state is in-memory for the duration of a tool call.
 
-**Version:** `1.0.0`
+**Version:** `1.1.0`
 
 ---
 

@@ -290,8 +290,8 @@ opencode mcp add context-shrink --global -- uvx --from git+https://github.com/ma
 ```
 
 `uvx`, `mcp` bağımlılığını izole bir ortamda çözer ve sunucuyu stdio üzerinden
-çalıştırır. Sürümü `context-shrink-mcp@1.0.0` (PyPI) veya
-`…context-shrink-mcp@v1.0.0` (GitHub) ile sabitleyin.
+çalıştırır. Sürümü `context-shrink-mcp@1.1.0` (PyPI) veya
+`…context-shrink-mcp@v1.1.0` (GitHub) ile sabitleyin.
 
 Model modunu aynı komutta etkinleştirin:
 
@@ -734,7 +734,7 @@ Bu sunucunun ele aldığı 64K profili ve `Prompt is too long` hatası [`mahirfa
 
 > **Gizlilik:** Sunucu, yapılandırdığınız yerel OpenAI-uyumlu endpoint'e yapılan opsiyonel özetleyici çağrısı dışında **kendi başına hiçbir ağ isteği yapmaz**. Telemetri yok, analitik yok, hiçbir veri makineden çıkmaz. Tüm durum yalnızca bir araç çağrısı boyunca bellekte tutulur.
 
-**Sürüm:** `1.0.0`
+**Sürüm:** `1.1.0`
 
 ---
 
