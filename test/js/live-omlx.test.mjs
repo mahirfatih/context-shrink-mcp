@@ -64,12 +64,17 @@ function parse(result) {
   return JSON.parse(result.content[0].text);
 }
 
-test("lists the three Context Shrink tools", async () => {
+test("lists the four Context Shrink tools", async () => {
   const names = await withClient(async (client) => {
     const { tools } = await client.listTools();
     return tools.map((tool) => tool.name).sort();
   });
-  assert.deepEqual(names, ["compact_context", "estimate_context", "trim_context"]);
+  assert.deepEqual(names, [
+    "compact_context",
+    "describe_config",
+    "estimate_context",
+    "trim_context",
+  ]);
 });
 
 test("estimate_context returns a token estimate", async () => {

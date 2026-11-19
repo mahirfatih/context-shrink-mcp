@@ -25,14 +25,25 @@ names are accepted first, then the legacy ``OMLX_SHRINK_*`` ones, then the
 * ``*_TIMEOUT``       - request timeout in seconds (default 180)
 * ``*_TOKENIZER``     - ``auto`` (default), a tiktoken encoding name, or
   ``heuristic``/``off``/``none``/``chars``
-* ``*_MAX_CONTEXT_TOKENS`` - default context budget (default 65536)
+* ``*_MAX_CONTEXT_TOKENS`` - default context budget (default 32768)
 * ``*_EXTRA_HEADERS`` - extra HTTP headers as a JSON object, for gateways that
   need them (Azure OpenAI's ``api-key`` header, org ids, ...)
 * ``*_LOG_LEVEL`` - stderr log level name (default ``INFO``)
+
+The context budget is resolved once at startup, first match wins:
+
+1. the ``max_context_tokens`` argument of a tool call,
+2. the ``--max-context`` command-line flag (``context-shrink --max-context 65536``),
+3. the ``*_MAX_CONTEXT_TOKENS`` environment variable,
+4. the built-in default, ``32768``.
+
+The default is deliberately small: when the window is unknown, trimming too
+early is harmless, while assuming too much makes every request fail.
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import json
 import logging
@@ -216,12 +227,59 @@ SUMMARY_TIMEOUT_SECONDS = _env_float(
     default=180.0,
 )
 
-MAX_CONTEXT_TOKENS = _env_int(
+DEFAULT_MAX_CONTEXT_TOKENS = 32768
+
+
+def _cli_max_context(argv: list[str]) -> int | None:
+    """Return the ``--max-context`` value from argv, or ``None`` when absent.
+
+    Unknown arguments are ignored so an MCP client can pass its own flags
+    without breaking startup, and abbreviations are disabled so unrelated
+    client arguments are never mistaken for this flag.
+    """
+    parser = argparse.ArgumentParser(
+        prog="context-shrink",
+        description="OpenAI-compatible context guard MCP server.",
+        allow_abbrev=False,
+    )
+    parser.add_argument(
+        "--max-context",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "default context window in tokens; overrides the environment "
+            f"variable; without either, {DEFAULT_MAX_CONTEXT_TOKENS} is used"
+        ),
+    )
+    parsed, _unknown = parser.parse_known_args(argv)
+    return parsed.max_context
+
+
+CLI_MAX_CONTEXT = _cli_max_context(sys.argv[1:])
+
+_ENV_MAX_CONTEXT_RAW = _env_value(
     "CONTEXT_SHRINK_MAX_CONTEXT_TOKENS",
     "OMLX_SHRINK_MAX_CONTEXT_TOKENS",
     "OPENAI_SHRINK_MAX_CONTEXT_TOKENS",
-    default=65536,
+    default="",
 )
+
+if CLI_MAX_CONTEXT is not None:
+    MAX_CONTEXT_TOKENS = max(1, CLI_MAX_CONTEXT)
+    MAX_CONTEXT_SOURCE = "cli"
+elif _ENV_MAX_CONTEXT_RAW:
+    MAX_CONTEXT_TOKENS = _env_int(
+        "CONTEXT_SHRINK_MAX_CONTEXT_TOKENS",
+        "OMLX_SHRINK_MAX_CONTEXT_TOKENS",
+        "OPENAI_SHRINK_MAX_CONTEXT_TOKENS",
+        default=DEFAULT_MAX_CONTEXT_TOKENS,
+    )
+    MAX_CONTEXT_SOURCE = "env"
+else:
+    MAX_CONTEXT_TOKENS = DEFAULT_MAX_CONTEXT_TOKENS
+    MAX_CONTEXT_SOURCE = "default"
+
 DEFAULT_KEEP_LAST = 8
 DEFAULT_THRESHOLD = 0.8
 DEFAULT_SUMMARY_BUDGET_TOKENS = 512
@@ -500,7 +558,7 @@ def estimate_context(
 
         estimate_context({
             "messages": [{"role": "user", "content": "hello"}],
-            "max_context_tokens": 65536,
+            "max_context_tokens": 32768,
         })
     """
     max_context_tokens = _coerce_budget(max_context_tokens)
@@ -532,7 +590,7 @@ def trim_context(
         trim_context({
             "messages": [...],
             "keep_last": 8,
-            "max_context_tokens": 65536,
+            "max_context_tokens": 32768,
         })
     """
     max_context_tokens = _coerce_budget(max_context_tokens)
@@ -665,6 +723,33 @@ def compact_context(
             "estimated_context_tokens_after": _estimate_tokens(compacted),
         },
         ensure_ascii=False,
+    )
+
+
+@server.tool()
+def describe_config() -> str:
+    """Report the resolved configuration without changing anything.
+
+    Shows the context window every tool will use and where it came from:
+    ``cli`` (``--max-context``), ``env`` (``*_MAX_CONTEXT_TOKENS``), or
+    ``default`` (``32768``). Extra header names are listed, never their values.
+    """
+    _, tokenizer = _resolve_tokenizer()
+    return json.dumps(
+        {
+            "base_url": DEFAULT_BASE_URL,
+            "model": DEFAULT_MODEL,
+            "max_context_tokens": MAX_CONTEXT_TOKENS,
+            "max_context_source": MAX_CONTEXT_SOURCE,
+            "keep_last": DEFAULT_KEEP_LAST,
+            "threshold": DEFAULT_THRESHOLD,
+            "summary_budget_tokens": DEFAULT_SUMMARY_BUDGET_TOKENS,
+            "summary_timeout_seconds": SUMMARY_TIMEOUT_SECONDS,
+            "tokenizer": tokenizer,
+            "extra_header_names": sorted(_extra_headers()),
+        },
+        ensure_ascii=False,
+        indent=2,
     )
 
 

@@ -476,3 +476,37 @@ def test_chat_completions_url_warns_on_missing_scheme(
         result = shrink._chat_completions_url("example.com/v1")
     assert result == "example.com/v1/chat/completions"
     assert "does not look like" in caplog.text
+
+
+# --- context-window resolution -----------------------------------------------
+
+
+def test_default_context_window_is_32768(shrink: ModuleType) -> None:
+    assert shrink.DEFAULT_MAX_CONTEXT_TOKENS == 32768
+
+
+def test_cli_max_context_parses_the_flag(shrink: ModuleType) -> None:
+    assert shrink._cli_max_context([]) is None
+    assert shrink._cli_max_context(["--max-context", "65536"]) == 65536
+
+
+def test_cli_max_context_ignores_unrelated_client_arguments(shrink: ModuleType) -> None:
+    argv = ["some-other-flag", "--lang", "tr", "--max-context", "1234", "--extra"]
+    assert shrink._cli_max_context(argv) == 1234
+    assert shrink._cli_max_context(["--unrelated", "value"]) is None
+
+
+def test_cli_max_context_disables_abbreviations(shrink: ModuleType) -> None:
+    # ``--max`` must not be treated as a prefix of ``--max-context``; it is
+    # simply ignored as an unrelated client argument.
+    assert shrink._cli_max_context(["--max", "5"]) is None
+
+
+def test_describe_config_reports_resolved_window(shrink: ModuleType) -> None:
+    payload = json.loads(shrink.describe_config())
+    assert payload["max_context_tokens"] == shrink.MAX_CONTEXT_TOKENS
+    assert payload["max_context_source"] == shrink.MAX_CONTEXT_SOURCE
+    assert payload["max_context_source"] in {"cli", "env", "default"}
+    assert payload["keep_last"] == shrink.DEFAULT_KEEP_LAST
+    assert payload["threshold"] == shrink.DEFAULT_THRESHOLD
+    assert "extra_header_names" in payload

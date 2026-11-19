@@ -196,7 +196,7 @@ You probably do not need it if your context window is large enough for your sess
 - **Token Counting:** optional `tiktoken` (default `cl100k_base`) with a character heuristic fallback — no hard dependency
 - **Dependencies:** `mcp` (MCP SDK) required; `tiktoken` optional — no GPU
 - **Target Server:** any OpenAI-compatible server — see [Compatible backends](#-compatible-backends)
-- **Defaults:** `max_context_tokens = 65536`, `keep_last = 8`, `threshold = 0.8`
+- **Defaults:** `max_context_tokens = 32768`, `keep_last = 8`, `threshold = 0.8`
 
 ---
 
@@ -207,6 +207,7 @@ You probably do not need it if your context window is large enough for your sess
 - 🧠 **Compact instead of drop** — `compact_context` replaces the oldest messages with a **summary**, keeping leading system messages and the most recent `keep_last` verbatim
 - 📝 **Three compaction modes** — summary provided, model-generated, or plan-only (`needs_summary: true`, no message content echoed back)
 - 🌐 **Optional real tokenizer** — uses `tiktoken` when installed, otherwise a tokenizer-free estimate (chars ÷ 4); `CONTEXT_SHRINK_TOKENIZER` controls the choice
+- 🧾 **Configurable window** — set the context budget with `--max-context`, `CONTEXT_SHRINK_MAX_CONTEXT_TOKENS`, or a per-call argument; `describe_config` shows the active value and its source
 - 🔌 **Plain MCP** — any MCP client can use the server, not just OpenCode
 - 🧩 **Chunked summarisation** — long histories are summarised in pieces so the local model does not overflow while summarising
 - 🔒 **No telemetry, no network calls** except the optional local summariser request
@@ -358,6 +359,43 @@ Add the server to your OpenCode config (`~/.config/opencode/opencode.jsonc`):
 
 Config changes apply without a restart — OpenCode watches config files and reloads MCP servers after a save. To force a full reload, run `/reload`.
 
+### Context window — the one setting most people change
+
+Every tool compares the conversation against a context budget. It is resolved in
+this order (first one wins):
+
+1. the `max_context_tokens` argument of a tool call,
+2. the `--max-context` command-line flag,
+3. `CONTEXT_SHRINK_MAX_CONTEXT_TOKENS` (or its legacy aliases),
+4. the built-in default, **`32768`**.
+
+The default is deliberately small: when the window is unknown, trimming a little
+too early is harmless, while assuming too much makes every request fail. Set it
+to your server's real window when that is larger.
+
+Both ways to set it live in the same OpenCode entry — pick one.
+
+**Flag (`--max-context`):**
+
+```jsonc
+"command": [
+  "python3",
+  "/absolute/path/to/context_shrink.py",
+  "--max-context", "65536"
+]
+```
+
+**Environment variable:**
+
+```jsonc
+"environment": {
+  "CONTEXT_SHRINK_MAX_CONTEXT_TOKENS": "65536"
+}
+```
+
+`describe_config` reports the window every tool will use and where it came from
+(`cli`, `env` or `default`).
+
 ### 5. (Optional) Enable model mode
 
 Set the environment variables under `environment` in the MCP entry so `compact_context` can summarise with the local model. The values below are the ones this project was developed with — a local **oMLX** server on Apple Silicon, serving `Qwen3.6-35B-A3B-4bit`:
@@ -426,7 +464,7 @@ CONTEXT_SHRINK_*  >  OMLX_SHRINK_* (legacy)  >  OPENAI_SHRINK_*
 | `CONTEXT_SHRINK_API_KEY` / `OMLX_SHRINK_API_KEY` / `OPENAI_SHRINK_API_KEY` | *(empty)* | Bearer token, if the server needs one |
 | `CONTEXT_SHRINK_TIMEOUT` / `OMLX_SHRINK_TIMEOUT` / `OPENAI_SHRINK_TIMEOUT` | `180` | Summariser request timeout, seconds (invalid values fall back to 180) |
 | `CONTEXT_SHRINK_TOKENIZER` / `OMLX_SHRINK_TOKENIZER` / `OPENAI_SHRINK_TOKENIZER` | `auto` | Token counter: `auto` (tiktoken `cl100k_base` if installed, else heuristic), a tiktoken encoding name, or `heuristic`/`off` to always use chars ÷ 4 |
-| `CONTEXT_SHRINK_MAX_CONTEXT_TOKENS` / `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `65536` | Default context budget for every tool call |
+| `CONTEXT_SHRINK_MAX_CONTEXT_TOKENS` / `OMLX_SHRINK_MAX_CONTEXT_TOKENS` / `OPENAI_SHRINK_MAX_CONTEXT_TOKENS` | `32768` | Default context budget for every tool call (the `--max-context` flag overrides it) |
 | `CONTEXT_SHRINK_EXTRA_HEADERS` / `OMLX_SHRINK_EXTRA_HEADERS` / `OPENAI_SHRINK_EXTRA_HEADERS` | *(empty)* | Extra HTTP headers as a JSON object, for gateways such as Azure OpenAI (`{"api-key": "..."}`) |
 | `CONTEXT_SHRINK_LOG_LEVEL` / `OMLX_SHRINK_LOG_LEVEL` / `OPENAI_SHRINK_LOG_LEVEL` | `INFO` | stderr log level (use `DEBUG` when troubleshooting); an invalid name falls back to `INFO` |
 
@@ -435,7 +473,7 @@ CONTEXT_SHRINK_*  >  OMLX_SHRINK_* (legacy)  >  OPENAI_SHRINK_*
 - An **empty `CONTEXT_SHRINK_MODEL`** puts `compact_context` into plan-only mode:
   it returns a `needs_summary` plan instead of calling a model.
 - A **too-small `max_context_tokens`** makes every call look over-budget; set it
-  to the model's real context window (the default is `65536`).
+  to the model's real context window (the default is `32768`).
 - **`*_EXTRA_HEADERS` must be a JSON object** — a string, array or malformed JSON
   is ignored with a warning.
 - A **remote/cloud `CONTEXT_SHRINK_BASE_URL`** forwards your messages to that
@@ -460,7 +498,7 @@ Example `estimate_context` call:
     { "role": "assistant", "content": "first answer" },
     { "role": "user", "content": "second message" }
   ],
-  "max_context_tokens": 65536
+  "max_context_tokens": 32768
 }
 ```
 
@@ -470,7 +508,7 @@ Example `trim_context` call:
 {
   "messages": [ "..." ],
   "keep_last": 8,
-  "max_context_tokens": 65536
+  "max_context_tokens": 32768
 }
 ```
 
@@ -498,11 +536,11 @@ Compaction flow, agent mode (two calls):
 | Tool | Parameter | Default | Meaning |
 | :--- | :--- | :--- | :--- |
 | *(all)* | `messages` | *(required)* | Conversation as `role` / `content` pairs |
-| `estimate_context` | `max_context_tokens` | `65536` | Budget to compare the estimate against |
+| `estimate_context` | `max_context_tokens` | `32768` | Budget to compare the estimate against |
 | `trim_context` | `keep_last` | `8` | Newest messages always kept |
-| `trim_context` | `max_context_tokens` | `65536` | Budget to trim down to |
+| `trim_context` | `max_context_tokens` | `32768` | Budget to trim down to |
 | `compact_context` | `keep_last` | `8` | Newest messages kept verbatim |
-| `compact_context` | `max_context_tokens` | `65536` | Context budget |
+| `compact_context` | `max_context_tokens` | `32768` | Context budget |
 | `compact_context` | `threshold` | `0.8` | Compact only above this fraction of the budget (unless `force`) |
 | `compact_context` | `force` | `false` | Compact even when under `threshold` |
 | `compact_context` | `summary` | *(none)* | Pre-written summary (mode 1) |
@@ -514,6 +552,10 @@ Compaction flow, agent mode (two calls):
 
 `estimate_context` also returns a `tokenizer` field naming the counter in use
 (for example `tiktoken:cl100k_base` or `heuristic(chars/4)`).
+
+`describe_config` takes no parameters: it returns the resolved `base_url`,
+`model`, `max_context_tokens` and its `max_context_source` (`cli`, `env` or
+`default`), the tokenizer, and the policy defaults.
 
 ### Minimal clients
 
@@ -619,7 +661,7 @@ python3 context_shrink.py   # starts the stdio server; Ctrl-C to stop
 
 ## 📝 Notes
 
-- Default context limit: `65536` tokens — change it to match your profile.
+- Default context limit: `32768` tokens — raise it with `--max-context` or `CONTEXT_SHRINK_MAX_CONTEXT_TOKENS` to match your profile.
 - Trim policy: oldest messages first; the last `keep_last` messages are always kept.
 - Compact policy: leading `system` messages are kept, the oldest of the rest are replaced by one `system` message holding the summary, and the last `keep_last` messages are kept verbatim.
 - The tool surface is plain MCP, so any MCP client can use the server, not just OpenCode.

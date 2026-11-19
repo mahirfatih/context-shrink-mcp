@@ -86,7 +86,7 @@ def test_stdio_handshake_lists_tools_and_calls_one() -> None:
 
         listing = _request(proc, 2, "tools/list", {})
         names = {tool["name"] for tool in listing["result"]["tools"]}
-        assert {"estimate_context", "trim_context", "compact_context"} <= names
+        assert {"estimate_context", "trim_context", "compact_context", "describe_config"} <= names
 
         call = _request(
             proc,

@@ -7,12 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.0] - 2026-11-15
 
+### Added
+
+- `--max-context N` command-line flag, so the default context window can be set
+  in the client's `command` array (for example
+  `["python3", "context_shrink.py", "--max-context", "65536"]`) instead of an
+  environment variable.
+- `describe_config` tool: reports the resolved `max_context_tokens` and its
+  source (`cli`, `env` or `default`), the tokenizer, and the policy defaults. It
+  changes nothing.
+
 ### Changed
 
-- The default `max_context_tokens` is now **65536** (was `32768`), matching the
-  widened oMLX context window. The `*_MAX_CONTEXT_TOKENS` environment variables
-  still override it; the tool names and the other defaults (`keep_last = 8`,
-  `threshold = 0.8`) are unchanged.
+- The built-in default `max_context_tokens` is **`32768`** (unchanged from
+  1.0.0). There is no auto-detection: the setting is resolved once at startup as
+  **tool argument > `--max-context` > `*_MAX_CONTEXT_TOKENS` env > `32768`**. The
+  default is deliberately small, because when the real window is unknown,
+  trimming too early is harmless while assuming too much makes every request
+  fail.
+
+- The tool names and the other defaults (`keep_last = 8`, `threshold = 0.8`) are
+  unchanged.
 
 ## [1.0.0]
 
