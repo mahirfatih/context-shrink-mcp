@@ -434,12 +434,48 @@ def _assemble_compaction(
     return [*leading, note, *keep]
 
 
+def _render_tool_calls(tool_calls: Any) -> str:
+    """Render assistant ``tool_calls`` as compact text for the summariser.
+
+    Tool calls are structural: dropping them from the summary makes the model
+    see a half-finished tool exchange and later emit malformed tool calls
+    ("unrecoverable tool call").  Keep the name, arguments and id in the
+    rendered text so the summariser can describe the call.
+    """
+    if not isinstance(tool_calls, list):
+        return ""
+    parts: list[str] = []
+    for call in tool_calls:
+        if not isinstance(call, dict):
+            continue
+        function = call.get("function") if isinstance(call.get("function"), dict) else {}
+        name = function.get("name") or "?"
+        arguments = function.get("arguments")
+        if not isinstance(arguments, str):
+            try:
+                arguments = json.dumps(arguments, ensure_ascii=False)
+            except (TypeError, ValueError):
+                arguments = str(arguments)
+        call_id = call.get("id")
+        suffix = f" (id={call_id})" if call_id else ""
+        parts.append(f"{name}({arguments}){suffix}")
+    return " -> ".join(parts)
+
+
 def _render_messages_for_model(messages: list[dict[str, Any]]) -> str:
     lines: list[str] = []
     for message in messages:
         role = message.get("role", "?") if isinstance(message, dict) else "?"
         content = message.get("content", "") if isinstance(message, dict) else ""
-        lines.append(f"{role}: {_content_to_text(content)}")
+        text = _content_to_text(content)
+        tool_calls = _render_tool_calls(message.get("tool_calls")) if isinstance(message, dict) else ""
+        if tool_calls:
+            marker = f"[tool_calls: {tool_calls}]"
+            text = f"{text} {marker}".strip() if text else marker
+        tool_call_id = message.get("tool_call_id") if isinstance(message, dict) else None
+        if tool_call_id:
+            text = f"(re: {tool_call_id}) {text}".strip()
+        lines.append(f"{role}: {text}")
     return "\n".join(lines)
 
 
