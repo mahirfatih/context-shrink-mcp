@@ -507,6 +507,12 @@ def _call_chat_completions(
     try:
         return str(body["choices"][0]["message"]["content"]).strip()
     except (KeyError, IndexError, TypeError) as error:
+        # oMLX / some servers return the full prompt when it exceeds the output
+        # limit instead of a clean error — fall back to returning what we got.
+        if "choices" in body and isinstance(body["choices"], list) and len(body["choices"]) > 0:
+            content = body["choices"][0].get("message", {}).get("content", "")
+            if content:
+                return str(content).strip()
         raise RuntimeError(f"unexpected summarizer response: {json.dumps(body)[:500]}") from error
 
 
@@ -518,7 +524,11 @@ def _summarize(
     max_context_tokens: int,
     summary_budget_tokens: int,
 ) -> str:
-    chunk_budget = max(1024, max_context_tokens - summary_budget_tokens - 1024)
+    # Chunk budget is based on the *summarized portion* size, not the full context
+    # window. When 51 K tokens are summarised a 64 K chunk budget means one huge
+    # chunk that overflows the model's output limit.  Use a fixed per-chunk cap
+    # (4096 tokens) so the summariser never receives more than it can handle.
+    chunk_budget = 4096
     chunks = _chunk_messages(to_summarize, chunk_budget)
     summaries: list[str] = []
     for chunk in chunks:
