@@ -398,7 +398,11 @@ def _trim_messages(
     max_context_tokens: int = MAX_CONTEXT_TOKENS,
 ) -> list[dict[str, Any]]:
     result = list(messages)
-    while len(result) > keep_last and _estimate_tokens(result) > max_context_tokens:
+    if len(result) <= keep_last or _estimate_tokens(result) <= max_context_tokens:
+        return result
+    # Drop the smallest number of leading messages that brings the estimate
+    # within the limit, keeping at least ``keep_last`` messages.
+    while len(result) - 1 >= keep_last and _estimate_tokens(result[1:]) > max_context_tokens:
         result = result[1:]
     return result
 
@@ -789,6 +793,7 @@ def describe_config() -> str:
             "max_context_source": MAX_CONTEXT_SOURCE,
             "keep_last": DEFAULT_KEEP_LAST,
             "threshold": DEFAULT_THRESHOLD,
+            "threshold_tokens": int(MAX_CONTEXT_TOKENS * DEFAULT_THRESHOLD),
             "summary_budget_tokens": DEFAULT_SUMMARY_BUDGET_TOKENS,
             "summary_timeout_seconds": SUMMARY_TIMEOUT_SECONDS,
             "tokenizer": tokenizer,

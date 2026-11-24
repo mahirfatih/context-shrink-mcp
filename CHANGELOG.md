@@ -1,4 +1,12 @@
-# Changelog
+## [Unreleased]
+
+### Added
+- `test/test.sh` runner supporting `--unit`, `--integration`, `--e2e`, `--smoke`, `--regression`, `--lint`, `--no-install`, `--only` flags (mirroring Plan Lock's runner).
+
+### Improved
+- `trim_context` / `_trim_messages`: single-pass leading-drop instead of
+  re-estimating the whole list each step (fewer calls to the tokenizer).
+- `describe_config`: now reports `threshold_tokens` alongside `threshold`.
 
 All notable changes to this project are documented in this file.
 
