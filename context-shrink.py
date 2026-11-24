@@ -337,7 +337,9 @@ def _resolve_tokenizer() -> tuple[Any, str]:
     try:
         encoder = tiktoken.get_encoding(encoding_name)
     except Exception as error:  # network/IO failure or unknown encoding
-        logger.warning("tokenizer %r unavailable (%s); using %s", encoding_name, error, _HEURISTIC_LABEL)
+        logger.warning(  # nosemgrep: python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure  -- encoding_name is a tokenizer label, not a secret
+            "tokenizer %r unavailable (%s); using %s", encoding_name, error, _HEURISTIC_LABEL,
+        )
         _tokenizer_cache = fallback
         return _tokenizer_cache
 
@@ -377,7 +379,8 @@ def _estimate_tokens(messages: list[dict[str, Any]]) -> int:
         try:
             return max(1, len(encode(text)))
         except Exception as error:  # pragma: no cover - defensive
-            logger.warning("tokenizer failed (%s); using %s", error, _HEURISTIC_LABEL)
+            logger.warning(  # nosemgrep: python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure  -- tokenizer error text, not a secret
+                "tokenizer failed (%s); using %s", error, _HEURISTIC_LABEL)
     chars = 0
     for message in messages:
         content = message.get("content", "") if isinstance(message, dict) else ""
