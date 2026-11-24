@@ -1,4 +1,4 @@
-# Context Shrink
+# Context Shrink MCP
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![MCP](https://img.shields.io/badge/MCP-stdio-lightgrey)
@@ -8,7 +8,7 @@
 
 🌐 [English](./README.md) · **Türkçe**
 
-**Context Shrink**, **OpenAI uyumlu herhangi bir uç noktaya** giden istekleri modelin bağlam (context) sınırının altında tutan küçük bir MCP sunucusudur. Çağrıdan önce bağlamı ölçer, ardından en eski mesajları ya **atar** ya da bir özete **sıkıştırır** — böylece sunucunun isteği reddetmesinin önüne geçer. Şunlarla çalışır (örnek):
+**Context Shrink MCP**, **OpenAI uyumlu herhangi bir uç noktaya** giden istekleri modelin bağlam (context) sınırının altında tutan küçük bir MCP sunucusudur. Çağrıdan önce bağlamı ölçer, ardından en eski mesajları ya **atar** ya da bir özete **sıkıştırır** — böylece sunucunun isteği reddetmesinin önüne geçer. Şunlarla çalışır (örnek):
 
 - oMLX
 - llama.cpp (`llama-server`)
@@ -342,7 +342,7 @@ Sunucuyu OpenCode yapılandırmanıza (`~/.config/opencode/opencode.jsonc`) ekle
 {
   "mcp": {
     "servers": {
-      "Context Shrink": {
+      "Context Shrink MCP": {
         "type": "local",
         "command": [
           "python3",
@@ -457,7 +457,7 @@ sağlayıcı girdisinden sapmasını engeller ve özetleyiciyi yerel modele yön
 {
   "mcp": {
     "servers": {
-      "Context Shrink": {
+      "Context Shrink MCP": {
         "type": "local",
         "command": [
           "/absolute/path/to/context-shrink-venv/bin/python",

@@ -345,7 +345,7 @@ def _resolve_tokenizer() -> tuple[Any, str]:
     return _tokenizer_cache
 
 
-server = MCPServer("Context Shrink")
+server = MCPServer("Context Shrink MCP")
 
 
 def _content_to_text(content: Any) -> str:

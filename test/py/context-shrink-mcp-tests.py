@@ -79,7 +79,7 @@ def test_stdio_handshake_lists_tools_and_calls_one() -> None:
                 "clientInfo": {"name": "pytest", "version": "0"},
             },
         )
-        assert init["result"]["serverInfo"]["name"] == "Context Shrink"
+        assert init["result"]["serverInfo"]["name"] == "Context Shrink MCP"
 
         # The protocol expects an `initialized` notification before normal calls.
         _send(proc, {"jsonrpc": "2.0", "method": "notifications/initialized"})

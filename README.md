@@ -1,4 +1,4 @@
-# Context Shrink
+# Context Shrink MCP
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![MCP](https://img.shields.io/badge/MCP-stdio-lightgrey)
@@ -8,7 +8,7 @@
 
 🌐 **English** · [Türkçe](./README.tr.md)
 
-**Context Shrink** is a tiny MCP server that keeps requests to **any OpenAI-compatible endpoint** under the model's context limit. It measures the context before the call, then either **drops** the oldest messages or **compacts** them into a summary — instead of letting the server reject the request. It works with, among others:
+**Context Shrink MCP** is a tiny MCP server that keeps requests to **any OpenAI-compatible endpoint** under the model's context limit. It measures the context before the call, then either **drops** the oldest messages or **compacts** them into a summary — instead of letting the server reject the request. It works with, among others:
 
 - oMLX
 - llama.cpp (`llama-server`)
@@ -344,7 +344,7 @@ Add the server to your OpenCode config (`~/.config/opencode/opencode.jsonc`):
 {
   "mcp": {
     "servers": {
-      "Context Shrink": {
+      "Context Shrink MCP": {
         "type": "local",
         "command": [
           "python3",
@@ -459,7 +459,7 @@ from the provider block, and points the summariser at the local model:
 {
   "mcp": {
     "servers": {
-      "Context Shrink": {
+      "Context Shrink MCP": {
         "type": "local",
         "command": [
           "/absolute/path/to/context-shrink-venv/bin/python",

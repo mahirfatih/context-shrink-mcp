@@ -429,7 +429,7 @@ def test_call_chat_completions_sends_extra_headers(
 
 # --- server identity ---------------------------------------------------------
 def test_server_display_name_is_context_shrink(shrink: ModuleType) -> None:
-    assert shrink.server.name == "Context Shrink"
+    assert shrink.server.name == "Context Shrink MCP"
 
 
 # --- input hardening: log level and budget ---------------------------------
