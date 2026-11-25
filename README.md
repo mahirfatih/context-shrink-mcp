@@ -21,9 +21,25 @@ See [Compatible backends](#-compatible-backends) for the full list.
 
 > **Token counting:** uses `tiktoken` when it is installed (`cl100k_base` by default) for a close approximation, and falls back to a tokenizer-free estimate (character count ÷ 4) otherwise. Either way it is a guard rail, not an exact budget — set `CONTEXT_SHRINK_TOKENIZER` (or the legacy `OMLX_SHRINK_*` / `OPENAI_SHRINK_*` names) to change the behaviour.
 
----
+## 📑 Table of Contents
 
-## 🔌 Compatible backends
+- [🔌 Compatible backends](#-compatible-backends)
+- [📖 Overview](#-overview)
+- [✅ Recommendation](#-recommendation)
+- [🛠️ Tech Stack & Architecture](#-tech-stack--architecture)
+- [✨ Features](#-features)
+- [🏗️ Architecture](#-architecture)
+- [🚀 Installation & Quick Start](#-installation--quick-start)
+- [📂 Project Structure](#-project-structure)
+- [🧪 Testing & CI](#-testing--ci)
+- [📚 Documentation](#-documentation)
+- [📝 Notes](#-notes)
+- [🔁 Migrating from oMLX Prompt Shrink](#-migrating-from-omlx-prompt-shrink)
+- [🔗 Background](#-background)
+- [🔐 Permissions & Privacy](#-permissions--privacy)
+- [📄 License](#-license)
+
+---
 
 The server only needs an **OpenAI-compatible `/v1/chat/completions` endpoint** —
 local model servers, self-hosted GPU engines and OpenAI gateways all qualify.
