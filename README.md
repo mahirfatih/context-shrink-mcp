@@ -1,8 +1,9 @@
 # Context Shrink MCP
 
+[![CI](https://github.com/mahirfatih/context-shrink-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/mahirfatih/context-shrink-mcp/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![MCP](https://img.shields.io/badge/MCP-stdio-lightgrey)
-![Client](https://img.shields.io/badge/client-OpenCode-green)
+![Tests](https://img.shields.io/badge/tests-78%20passed-brightgreen)
 [![PyPI](https://img.shields.io/pypi/v/context-shrink-mcp)](https://pypi.org/project/context-shrink-mcp/)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
