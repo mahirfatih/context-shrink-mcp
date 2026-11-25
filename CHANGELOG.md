@@ -7,6 +7,9 @@
 - `trim_context` / `_trim_messages`: single-pass leading-drop instead of
   re-estimating the whole list each step (fewer calls to the tokenizer).
 - `describe_config`: now reports `threshold_tokens` alongside `threshold`.
+- Token estimation now counts tool calls and tool-call ids, not just message
+  content, so histories heavy on tool use are measured accurately.
+- Added `--version` flag to the CLI.
 
 All notable changes to this project are documented in this file.
 

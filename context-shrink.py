@@ -368,14 +368,25 @@ def _content_to_text(content: Any) -> str:
     return str(content)
 
 
+def _message_to_text(message: Any) -> str:
+    """Render a message (content + tool calls + tool-call id) as plain text."""
+    if not isinstance(message, dict):
+        return ""
+    content = _content_to_text(message.get("content", ""))
+    tool_calls = _render_tool_calls(message.get("tool_calls"))
+    tool_call_id = message.get("tool_call_id")
+    parts = [content]
+    if tool_calls:
+        parts.append(f"[tool_calls: {tool_calls}]")
+    if tool_call_id:
+        parts.append(f"(re: {tool_call_id})")
+    return " ".join(part for part in parts if part).strip()
+
+
 def _estimate_tokens(messages: list[dict[str, Any]]) -> int:
     encode, _ = _resolve_tokenizer()
     if encode is not None:
-        text = "\n".join(
-            _content_to_text(message.get("content", ""))
-            for message in messages
-            if isinstance(message, dict)
-        )
+        text = "\n".join(_message_to_text(message) for message in messages)
         try:
             return max(1, len(encode(text)))
         except Exception as error:  # pragma: no cover - defensive
@@ -383,8 +394,7 @@ def _estimate_tokens(messages: list[dict[str, Any]]) -> int:
                 "tokenizer failed (%s); using %s", error, _HEURISTIC_LABEL)
     chars = 0
     for message in messages:
-        content = message.get("content", "") if isinstance(message, dict) else ""
-        chars += len(_content_to_text(content))
+        chars += len(_message_to_text(message))
     return max(1, int(math.ceil(chars / 4)))
 
 
@@ -813,6 +823,9 @@ def main() -> None:
     This is the console-script entry point (``context-shrink``) and the
     ``__main__`` guard's target: the MCP client owns the process lifetime.
     """
+    if "--version" in sys.argv[1:]:
+        sys.stdout.write("context-shrink-mcp 1.1.0\n")
+        return
     try:
         asyncio.run(server.run_stdio_async())
     except (KeyboardInterrupt, BrokenPipeError):  # pragma: no cover - user interrupt
