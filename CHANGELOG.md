@@ -1,4 +1,4 @@
-## [Unreleased]
+## [1.2.0] - 2026-11-26
 
 ### Added
 - `test/test.sh` runner supporting `--unit`, `--integration`, `--e2e`, `--smoke`, `--regression`, `--lint`, `--no-install`, `--only` flags (mirroring Plan Lock's runner).

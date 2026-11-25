@@ -20,7 +20,7 @@ class E2ETests(unittest.TestCase):
             capture_output=True, text=True, timeout=30,
         )
         self.assertEqual(proc.returncode, 0)
-        self.assertIn("1.1.0", proc.stdout)
+        self.assertIn("1.2.0", proc.stdout)
 
     def test_max_context_flag(self):
         proc = subprocess.run(

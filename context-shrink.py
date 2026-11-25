@@ -824,7 +824,7 @@ def main() -> None:
     ``__main__`` guard's target: the MCP client owns the process lifetime.
     """
     if "--version" in sys.argv[1:]:
-        sys.stdout.write("context-shrink-mcp 1.1.0\n")
+        sys.stdout.write("context-shrink-mcp 1.2.0\n")
         return
     try:
         asyncio.run(server.run_stdio_async())
