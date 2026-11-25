@@ -37,6 +37,9 @@ See [Compatible backends](#-compatible-backends) for the full list.
 - [🔁 Migrating from oMLX Prompt Shrink](#-migrating-from-omlx-prompt-shrink)
 - [🔗 Background](#-background)
 - [🔐 Permissions & Privacy](#-permissions--privacy)
+- [🧠 How it works](#-how-it-works)
+- [🗂️ What gets read from where](#-what-gets-read-from-where)
+- [⏰ Headless usage (desktop & scheduler)](#-headless-usage-desktop--scheduler)
 - [🔮 Roadmap](#-roadmap)
 - [📄 License](#-license)
 
@@ -755,6 +758,38 @@ The 64K profile and the `Prompt is too long` failure this server addresses are d
 > **Privacy:** The server makes **no network requests** of its own except the optional summariser call to the local OpenAI-compatible endpoint you configure. No telemetry, no analytics, no data leaves the machine. All state is in-memory for the duration of a tool call.
 
 **Version:** `1.1.0`
+
+---
+
+## 🧠 How it works
+
+Before an agent sends a chat request, it calls one of three MCP tools:
+
+1. **`estimate_context`** — measures the history (content + tool calls) and reports `should_trim`.
+2. **`trim_context`** — drops the oldest messages until the history fits, always keeping the newest `keep_last`.
+3. **`compact_context`** — replaces the oldest messages with a summary, keeping leading `system` messages and the newest `keep_last` verbatim.
+
+No request is rewritten silently: every tool returns JSON with the counts and the resulting message list (where applicable), so the agent decides what to send.
+
+---
+
+## 🗂️ What gets read from where
+
+| Value | Source order (first wins) |
+| :--- | :--- |
+| Context budget | `max_context_tokens` argument → `--max-context` flag → `*_MAX_CONTEXT_TOKENS` env → default `32768` |
+| Summariser endpoint | tool argument → `CONTEXT_SHRINK_BASE_URL` → legacy aliases → default `http://127.0.0.1:8000/v1` |
+| Token counter | `CONTEXT_SHRINK_TOKENIZER` → `auto` (tiktoken if present, else chars ÷ 4) |
+| Extra headers | `CONTEXT_SHRINK_EXTRA_HEADERS` JSON object (names only shown by `describe_config`) |
+
+---
+
+## ⏰ Headless usage (desktop & scheduler)
+
+This is a **stdio MCP server**, not a scheduled CLI: the MCP client owns the
+process lifetime and starts it on demand. There is nothing to put in crontab.
+For a persistent setup, register it globally with OpenCode (`opencode mcp add
+... --global`) or point any MCP client at `context-shrink.py` as shown above.
 
 ---
 
