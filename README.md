@@ -37,6 +37,7 @@ See [Compatible backends](#-compatible-backends) for the full list.
 - [🔁 Migrating from oMLX Prompt Shrink](#-migrating-from-omlx-prompt-shrink)
 - [🔗 Background](#-background)
 - [🔐 Permissions & Privacy](#-permissions--privacy)
+- [🔮 Roadmap](#-roadmap)
 - [📄 License](#-license)
 
 ---
@@ -754,6 +755,13 @@ The 64K profile and the `Prompt is too long` failure this server addresses are d
 > **Privacy:** The server makes **no network requests** of its own except the optional summariser call to the local OpenAI-compatible endpoint you configure. No telemetry, no analytics, no data leaves the machine. All state is in-memory for the duration of a tool call.
 
 **Version:** `1.1.0`
+
+---
+
+## 🔮 Roadmap
+
+- **✅ Done:** token estimate with tool calls, `--version` flag, SAST/secret scan clean, comprehensive test suites (smoke/sanity/unit/regression/integration/e2e/ui), README table of contents.
+- **Remaining:** async summariser streaming, configurable chunk budget, OpenTelemetry-style tracing (optional).
 
 ---
 
