@@ -686,6 +686,23 @@ context-shrink-mcp/
 ./test/test.sh --only test/py/context-shrink-tests.py::test_compact_uses_provided_summary
 ```
 
+- **Second runner (kebab-case suites):** [`test/run-all-tests.sh`](./test/run-all-tests.sh) / [`test/run-tests.py`](./test/run-tests.py) — 7 suites in `test/py/`:
+
+  | Suite | File | Scope |
+  | :--- | :--- | :--- |
+  | 💨 Smoke | `test/py/test-smoke.py` | Compile, module load, `--version` / `--help` |
+  | ✅ Sanity | `test/py/test-sanity.py` | Constants, defaults, `describe_config` |
+  | 🔬 Unit | `test/py/test-unit.py` | Pure helpers, tokenizer, chunking, headers |
+  | 🩹 Regression | `test/py/test-regression.py` | CRLF/UTF-8, empty input, idempotency |
+  | 🔗 Integration | `test/py/test-integration.py` | MCP stdio handshake |
+  | 🎯 E2E | `test/py/test-e2e.py` | Real CLI subprocess |
+  | 🖥️ UI | `test/py/test-automated-ui.py` | CLI output contract |
+
+  ```bash
+  cd test && bash run-all-tests.sh        # all 7 suites (29 tests)
+  cd test && python3 run-tests.py smoke   # one suite
+  ```
+
 - **Runner:** [`test/test.sh`](./test/test.sh) installs the dev dependencies, runs Ruff, then pytest. The interpreter is the project `.venv` when present, otherwise `python3`.
 - **Suites:** [`test/py/context-shrink-tests.py`](./test/py/context-shrink-tests.py) covers the pure helpers (token estimation, trimming, compaction splitting and chunking), the tokenizer resolution logic and the env-var parsing — no network. [`test/py/context-shrink-mcp-tests.py`](./test/py/context-shrink-mcp-tests.py) adds an end-to-end round-trip over the real STDIO transport (handshake → `tools/list` → `tools/call`).
 - **Live tests (opt-in):** [`test/py/context-shrink-live-tests.py`](./test/py/context-shrink-live-tests.py) and the Node suite in [`test/js/`](./test/js) hit a real endpoint. They are skipped unless `CONTEXT_SHRINK_LIVE=1` is set and the endpoint answers, so the default run stays offline. The API key is read from `CONTEXT_SHRINK_API_KEY`, never stored in the repo.
