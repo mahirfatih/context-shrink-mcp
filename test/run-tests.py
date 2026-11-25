@@ -7,7 +7,7 @@ import pathlib
 import sys
 import unittest
 
-TEST_DIR = pathlib.Path(__file__).resolve().parent
+TEST_DIR = pathlib.Path(__file__).resolve().parent / "py"
 
 SUITES = {
     "smoke": "test-smoke.py",
